@@ -63,6 +63,35 @@ python experiments/stopping_rule_confound.py
 This follow-up is deliberately diagnostic: it should determine whether the
 observed powers generalization gap survives when training duration is controlled.
 
+## Squares relatedness follow-up
+
+The stopping-rule follow-up is intentionally kept separate from the next
+relatedness question. `experiments/squares_relatedness.py` adds **squares** as an
+intermediate diagnostic task and tests cloning from **multiplication → squares**
+against a scratch initialization.
+
+The squares task maps `(a, b)` to `a²`. It is structurally related to multiplication
+while retaining the same two-input model interface. The experiment measures only
+convergence speed to the existing 85%-training-accuracy threshold; it does not
+change the main Phase 4 curriculum or use a test set to select a stopping budget.
+
+Outputs:
+
+- `results/squares_relatedness.csv` — per-seed convergence results.
+- `results/squares_relatedness_summary.csv` — aggregate convergence and paired
+  scratch/clone speedup statistics.
+
+Run it with:
+
+```bash
+python experiments/squares_relatedness.py
+```
+
+The purpose is diagnostic: determine whether the additional related task provides
+another observation consistent with a relationship between task relatedness and
+transfer speedup. A positive result should not by itself establish a general law;
+the number of task pairs remains small.
+
 ## Repo structure
 
 ```
@@ -72,7 +101,7 @@ observed powers generalization gap survives when training duration is controlled
 ├── requirements.txt
 ├── src/
 │   ├── skill.py         # TinyMLP skill representation + clone() (Section 5)
-│   ├── tasks.py          # addition/subtraction/multiplication/powers task generators
+│   ├── tasks.py          # addition/subtraction/multiplication/powers/squares task generators
 │   ├── compatibility.py  # P(T|s_i) definition + reuse/clone/scratch decision rule
 │   ├── strategies.py     # 3 training strategies: shared, independent scratch, clone-and-adapt
 │   ├── experiment.py     # runs all strategies across seeds (Phase 4 driver)
@@ -80,7 +109,8 @@ observed powers generalization gap survives when training duration is controlled
 │   ├── make_plots.py     # generates results/plot_*.png
 │   └── print_summary.py  # formats report + stats tables as markdown for the CI job summary
 ├── experiments/
-│   └── stopping_rule_confound.py # fixed-budget confound follow-up
+│   ├── stopping_rule_confound.py # fixed-budget confound follow-up
+│   └── squares_relatedness.py    # multiplication → squares relatedness follow-up
 └── results/
     ├── report.md          # full write-up
     ├── plot_*.png          # figures
@@ -96,8 +126,8 @@ python run_all.py
 ```
 
 This regenerates every CSV, statistics table, and plot in `results/` (~15
-random seeds; runs in well under a minute on CPU, no GPU/deep-learning
-framework required — the whole thing is numpy).
+random seeds; runs in well under a minute on CPU, no GPU/deep-learning framework
+required — the whole thing is numpy).
 
 ## Status
 
