@@ -8,6 +8,7 @@ The current research plan is tracked in [Issue #3](https://github.com/kobros-tec
 
 - Prior knowledge can produce positive, negligible, or negative transfer depending on the source-target pair; cloning is not universally beneficial.
 - Earlier relatedness-pair experiments show approximately 2.31× speedup for multiplication → powers, 1.26× for multiplication → squares, and negative transfer (0.33×) for addition → subtraction.
+- The expanded fixed-target matrix confirms heterogeneous transfer: powers benefit from additional prior history (471.6 → 355.2 → 237.3 epochs), while division shows negative transfer (515.2 → 616.2 → 617.5 epochs) and squares remains difficult (20.0% → 20.0% → 13.3% success).
 - A corrected reuse gate requires both compatibility evidence and independent target-solve accuracy, preventing a merely related but unsolved skill from being treated as a zero-training solution.
 - The retention checks re-evaluate previously acquired skills after later acquisitions on stable skill-specific evaluation sets.
 - The reported zero-change retention checks are consistent with the isolated-skill invariant: stored parent skills are not modified during later skill acquisition.
@@ -15,11 +16,13 @@ The current research plan is tracked in [Issue #3](https://github.com/kobros-tec
 
 ## Final paper
 
-The final-paper PR organizes the existing evidence into:
+The final-paper PR organizes the evidence into:
 
 - abstract and research questions;
 - experimental setup and data separation;
+- formal mathematical formulation;
 - acquisition and transfer results;
+- fixed-target prerequisite-history analysis;
 - mechanism-level retention verification;
 - statistical interpretation;
 - limitations and threats to validity;
