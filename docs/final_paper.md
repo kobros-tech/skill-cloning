@@ -31,6 +31,93 @@ The controller exposes three acquisition routes:
 
 The corrected reuse gate is important. A high frozen compatibility score alone is not sufficient evidence that the source skill already solves the target. The independent solve-accuracy check prevents a merely related skill from being incorrectly treated as a zero-training solution.
 
+### 2.1 Mathematical formulation
+
+Let the incoming target task be $T$ and let the repository contain previously acquired skills $s_i$, each represented by a parameter vector $\theta_i$. A skill maps an input $x$ to an output through $f(x;\theta_i)$.
+
+For a target probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
+
+$$
+\operatorname{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}\left(f(x_j;\theta_i)-y_j\right)^2
+$$
+
+$$
+P(T\mid s_i)=\exp\left(-\frac{\operatorname{MSE}(T,s_i)}{60}\right).
+$$
+
+The compatibility score is computed without updating $\theta_i$. It therefore measures how well the frozen parent already matches the target, rather than how useful its internal representation will necessarily be after adaptation.
+
+Let $A(T,s_i)$ denote the independent target-solve accuracy used by the corrected reuse gate. With thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects an action according to:
+
+$$
+\operatorname{action}(T,s_i)=
+\begin{cases}
+\mathrm{reuse} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{solve}} \text{ and } A(T,s_i)\geq 0.85,\\
+\mathrm{clone} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{clone}} \text{ and the reuse condition is not satisfied},\\
+\mathrm{scratch} & \text{otherwise.}
+\end{cases}
+$$
+
+When clone-and-adapt is selected from parent $s_i$, the target model is initialized from the parent's parameters:
+
+$$
+\theta_T^{(0)}=\theta_i.
+$$
+
+For scratch learning, $\theta_T^{(0)}$ is independently initialized. The adapted parameters are then obtained by minimizing the target training loss, represented here by mean squared error:
+
+$$
+\theta_T^*=\arg\min_{\theta}\;\frac{1}{n}\sum_{j=1}^{n}\left(f(x_j;\theta)-y_j\right)^2.
+$$
+
+These equations define the mechanism evaluated in the experiments; they do not assume that a larger compatibility score must imply a larger transfer benefit.
+
+### 2.2 Acquisition metrics
+
+For a matched seed $r$, let $E_{\mathrm{scratch}}^{(r)}$ and $E_{\mathrm{clone}}^{(r)}$ denote the numbers of epochs required to reach the predeclared training criterion. The per-seed convergence speedup is:
+
+$$
+S^{(r)}=\frac{E_{\mathrm{scratch}}^{(r)}}{E_{\mathrm{clone}}^{(r)}}.
+$$
+
+Thus $S>1$ favors clone-and-adapt, while $S<1$ indicates that cloning is slower than scratch. The reported paired comparisons treat the matched seed as the unit of analysis.
+
+Acquisition reliability is kept separate from efficiency. Let $I_r=1$ when the target reaches the declared acquisition criterion within the allowed budget and $I_r=0$ otherwise. The empirical success rate is:
+
+$$
+R=\frac{1}{N}\sum_{r=1}^{N} I_r.
+$$
+
+This separation is important for difficult targets such as squares, where a method may have a low success rate even if successful runs can be compared for convergence speed.
+
+### 2.3 Retention and isolation invariant
+
+For an acquired skill $s_i$, let $\theta_i^{\mathrm{pre}}$ and $\theta_i^{\mathrm{post}}$ denote its stored parameters immediately before and after a later skill is acquired. The intended isolated-skill invariant is:
+
+$$
+\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}},
+$$
+
+or equivalently,
+
+$$
+\Delta\theta_i=\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}=0.
+$$
+
+The retention experiment evaluates the same stored skill on the same stable retention set before and after later acquisition. Its diagnostic accuracy change is:
+
+$$
+\Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
+$$
+
+The predeclared practical diagnostic criterion is:
+
+$$
+\Delta A_i\geq-0.05.
+$$
+
+Because the stored parent is not optimized after acquisition and the evaluation set is unchanged, $\Delta A_i=0$ is expected under the mechanism. Therefore this quantity is reported as an implementation/invariance diagnostic, not as a statistical estimate of resistance to interference.
+
 ### Data separation
 
 The experiment separates target-training data, compatibility-probe data, solve/accuracy data, and held-out evaluation data. Held-out evaluation data are not used to choose thresholds, budgets, stopping rules, or model-selection decisions.
@@ -45,7 +132,7 @@ Experiments use matched deterministic seeds. The main relatedness and retention 
 
 The initial source-target experiments examined multiplication → squares, multiplication → powers, addition → subtraction, and addition → multiplication. These results motivated a stronger fixed-target design: hold the target fixed and vary the prior-skill history.
 
-The planned prerequisite matrix includes each of subtraction, division, squares, and powers under three histories: no prior skill, addition only, and addition + multiplication. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
+The prerequisite matrix includes each of subtraction, division, squares, and powers under three histories: no prior skill, addition only, and addition + multiplication. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
 
 The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target.
 
@@ -83,15 +170,15 @@ For paired strategy comparisons, the unit of analysis is the matched seed. Repor
 
 The retention check is intentionally treated differently. Its primary diagnostic quantity is:
 
-\[
-\Delta_i = A_{i,\mathrm{post}} - A_{i,\mathrm{pre}},
-\]
+$$
+\Delta_i = A_{i,\mathrm{post}} - A_{i,\mathrm{pre}}.
+$$
 
-where accuracy is measured on the same held-out retention set for the same skill and seed. The practical diagnostic rule used by the experiment is:
+The practical diagnostic rule used by the experiment is:
 
-\[
-\Delta_i \ge -0.05.
-\]
+$$
+\Delta_i \geq -0.05.
+$$
 
 This five-percentage-point value is a declared practical tolerance. It is not a statistical equivalence margin and is not used to claim that the architecture has been shown equivalent in performance before and after acquisition.
 
