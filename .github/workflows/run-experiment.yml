@@ -1,0 +1,45 @@
+name: Run continual-skill-learning experiment
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run experiment (Phases 1-4: build, baselines, evaluation)
+        run: python run_all.py
+
+      - name: Print results to the workflow summary
+        run: python src/print_summary.py >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Also print raw stats tables to the log
+        run: |
+          echo "=== t_forgetting.csv ==="
+          cat results/t_forgetting.csv
+          echo
+          echo "=== t_convergence.csv ==="
+          cat results/t_convergence.csv
+          echo
+          echo "=== t_retention.csv ==="
+          cat results/t_retention.csv
+
+      - name: Upload results (report, plots, CSVs) as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiment-results
+          path: results/
+          retention-days: 90

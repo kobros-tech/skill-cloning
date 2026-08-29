@@ -1,0 +1,5 @@
+a,b,task,mean_a,mean_b,mean_diff (a-b),std_diff,n,paired_t_stat,paired_t_p,wilcoxon_stat,wilcoxon_p
+independent_scratch,clone_and_adapt,addition,295.93333333333334,295.93333333333334,0.0,0.0,15,,,0.0,
+independent_scratch,clone_and_adapt,subtraction,32.93333333333333,68.13333333333334,-35.2,35.1348422916219,15,-3.880165809624525,0.0016655418204074676,0.0,0.011616044899262472
+independent_scratch,clone_and_adapt,multiplication,1174.9333333333334,1174.9333333333334,0.0,0.0,15,,,0.0,
+independent_scratch,clone_and_adapt,powers,471.6,91.86666666666666,379.73333333333335,144.1073343363335,15,10.205593509677632,7.255762480416685e-08,0.0,6.103515625e-05
