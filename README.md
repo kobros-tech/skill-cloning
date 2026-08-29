@@ -34,6 +34,48 @@ uploaded as a downloadable `experiment-results` artifact on each run.
   "stop at 85% training accuracy" rule, not from cloning itself. Flagged as the
   next thing to fix.
 
+## Stopping-rule confound follow-up
+
+The original Phase 4 convergence metric stops each run when training accuracy
+reaches 85%. Because a clone may reach that threshold earlier than a scratch
+model, comparing held-out MSE at the stopping point can mix two effects:
+initialization quality and training duration.
+
+`experiments/stopping_rule_confound.py` provides a controlled follow-up for the
+powers ← multiplication experiment. It records the original 85%-accuracy stopping
+outcome, then re-runs clone and scratch from the same initial states at identical,
+predeclared training budgets. Validation and test MSE are measured at every
+budget without using the test set to choose a budget.
+
+Outputs:
+
+- `results/stopping_rule_confound.csv` — per-seed, per-budget raw results.
+- `results/stopping_rule_confound_summary.csv` — mean/std/min/max summaries.
+- `results/stopping_rule_confound_stopping_epochs.csv` — original stopping-rule
+  epochs for clone vs scratch.
+
+Run it with:
+
+```bash
+python experiments/stopping_rule_confound.py
+```
+
+This follow-up is deliberately diagnostic: it should determine whether the
+observed powers generalization gap survives when training duration is controlled.
+
+## Quick summary of findings
+
+- Catastrophic forgetting is real and large in the shared-network baseline
+  (MSE on old tasks grows 3–4 orders of magnitude); clone-and-adapt eliminates it
+  (p < 10⁻⁹ on 3 of 4 tasks, paired by seed).
+- Clone-and-adapt's convergence speedup is relatedness-dependent: 5.1× faster when
+  cloning from a closely related skill (powers ← multiplication), but *slower*
+  than random init when the parent is only weakly related (subtraction ← addition).
+- A genuine limitation surfaced: on powers, the cloned skill converged faster but
+  generalized *worse* than a from-scratch skill — likely a confound from the
+  "stop at 85% training accuracy" rule, not from cloning itself. Flagged as the
+  next thing to fix.
+
 ## Repo structure
 
 ```
@@ -50,6 +92,8 @@ uploaded as a downloadable `experiment-results` artifact on each run.
 │   ├── analysis.py       # paired statistical tests (Phase 4 evaluation)
 │   ├── make_plots.py     # generates results/plot_*.png
 │   └── print_summary.py  # formats report + stats tables as markdown for the CI job summary
+├── experiments/
+│   └── stopping_rule_confound.py # fixed-budget confound follow-up
 └── results/
     ├── report.md          # full write-up
     ├── plot_*.png          # figures
