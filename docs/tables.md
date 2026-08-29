@@ -13,20 +13,22 @@ These tables are intended as the compact statistical presentation for the final 
 
 The table demonstrates why compatibility score should not be interpreted as a complete predictor of transfer usefulness.
 
-## Table 2 — Historical retention comparison
+## Table 2 — Fixed-target prerequisite matrix
 
-The original shared-network experiment showed large degradation of old-task performance after later tasks were trained. The isolated clone-and-adapt mechanism kept prior skills stable. The original report gives the following paired MSE comparisons:
+The expanded experiment holds the target fixed while varying the prior-skill history. This separates the effect of relevant prior knowledge from the mere presence of additional training history.
 
-| Task | Shared-network mean MSE | Proposed mean MSE | Paired t-test p | Wilcoxon p |
-|---|---:|---:|---:|---:|
-| Addition | 1171.7 | 0.15 | 2.7×10⁻¹² | 0.00006 |
-| Subtraction | 1963.2 | 0.14 | 1.1×10⁻¹³ | 0.00006 |
-| Multiplication | 446.4 | 0.38 | 8.7×10⁻¹⁰ | 0.00006 |
-| Powers | 0.29 | 3.71 | 7.4×10⁻⁴ | 0.026 |
+| Target | No prior skill | Addition only | Addition + Multiplication |
+|---|---:|---:|---:|
+| Subtraction | 33.5 epochs | 62.3 epochs | 73.2 epochs |
+| Division | 515.2 epochs | 616.2 epochs | 617.5 epochs |
+| Squares | 20.0% success | 20.0% success | 13.3% success |
+| Powers | 471.6 epochs | 355.2 epochs | 237.3 epochs |
 
-**Important:** the powers row belongs to the historical pre-fix analysis documented in `results/report.md`. It must not be presented as the current controller's final result without also presenting the corrected rerun. The report explicitly states that the false-reuse bug changed the powers result.
+For subtraction, division, and powers, the values are acquisition epochs to the declared criterion. Squares is reported as success rate because many runs do not reach the acquisition criterion within the allowed budget. The results show heterogeneous transfer: additional prior skills substantially help powers, while division exhibits negative transfer and squares remains difficult.
 
-## Table 3 — Current retention mechanism check
+These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
+
+## Table 3 — Retention mechanism check
 
 | Quantity | Experimental definition | Reported result |
 |---|---|---|
@@ -49,3 +51,7 @@ The original shared-network experiment showed large degradation of old-task perf
 | Frozen compatibility score alone does not fully predict transfer benefit. | Generalization to large models or arbitrary domains. |
 | Matched-seed evaluation can separate acquisition reliability, efficiency, and mechanism-level retention checks. | Causal explanations for why every task transfers differently. |
 | The isolated-skill mechanism prevents later training from overwriting a stored parent skill in the tested protocol. | Robustness to interference when later training is allowed to modify shared parameters. |
+
+## Historical-result note
+
+The repository also contains an earlier shared-network comparison in `results/report.md`. That analysis predates the corrected reuse controller and includes a historical Powers comparison that is not part of the current final controller results. It is intentionally not reproduced as a publication table here, to avoid mixing pre-fix and current results. The current paper should use the corrected experiments and the fixed-target matrix above as the authoritative quantitative evidence.
