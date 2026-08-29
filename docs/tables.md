@@ -26,26 +26,26 @@ The original shared-network experiment showed large degradation of old-task perf
 
 **Important:** the powers row belongs to the historical pre-fix analysis documented in `results/report.md`. It must not be presented as the current controller's final result without also presenting the corrected rerun. The report explicitly states that the false-reuse bug changed the powers result.
 
-## Table 3 — Current retention experiment
+## Table 3 — Current retention mechanism check
 
 | Quantity | Experimental definition | Reported result |
 |---|---|---|
 | Seeds per sequence | Matched deterministic seeds | 15 |
 | Sequences | Representative 3-skill arithmetic sequences | 4 |
 | Evaluation set | Stable, skill-specific held-out set | 300 examples / check |
-| Practical retention tolerance | Maximum allowed absolute accuracy loss | 5 percentage points |
-| Mean retention delta | Post accuracy − pre accuracy | 0.0000 in reported checks |
+| Practical retention tolerance | Maximum diagnostic accuracy loss | 5 percentage points |
+| Repeated-check mean delta | Post accuracy − pre accuracy | 0.0000 in reported checks |
 | Retention pass rate | Fraction with delta ≥ −0.05 | 100% in reported checks |
-| Bootstrap interval | 95% bootstrap interval for mean delta | [0, 0] in reported checks |
 
-The current retention result should be described as **no measurable forgetting under the tested isolated-skill mechanism**, not as proof that catastrophic forgetting cannot occur in general.
+**Interpretation:** these zero-change checks are consistent with the isolated-skill invariant: the stored parent network is not modified during later skill acquisition, and the same network is evaluated on the same retention set. They are therefore an implementation/mechanism check, not a statistical demonstration that the system is robust to catastrophic forgetting. Bootstrap confidence intervals and effect sizes for this quantity are intentionally not presented as evidence of an interference effect.
 
 ## Table 4 — Main claim boundaries
 
 | Supported by the experiments | Not established by the experiments |
 |---|---|
-| Skills can be stored independently and retained while new skills are acquired. | Universal absence of catastrophic forgetting. |
+| Skills can be stored independently and remain unchanged while new skills are acquired. | Universal absence of catastrophic forgetting. |
 | Reuse, clone-and-adapt, and scratch are all useful acquisition routes. | Universal superiority of cloning. |
 | Transfer can be positive or negative depending on the source-target pair. | A universal prerequisite hierarchy. |
 | Frozen compatibility score alone does not fully predict transfer benefit. | Generalization to large models or arbitrary domains. |
-| Matched-seed evaluation can separate acquisition reliability, efficiency, and retention. | Causal explanations for why every task transfers differently. |
+| Matched-seed evaluation can separate acquisition reliability, efficiency, and mechanism-level retention checks. | Causal explanations for why every task transfers differently. |
+| The isolated-skill mechanism prevents later training from overwriting a stored parent skill in the tested protocol. | Robustness to interference when later training is allowed to modify shared parameters. |
