@@ -63,19 +63,6 @@ python experiments/stopping_rule_confound.py
 This follow-up is deliberately diagnostic: it should determine whether the
 observed powers generalization gap survives when training duration is controlled.
 
-## Quick summary of findings
-
-- Catastrophic forgetting is real and large in the shared-network baseline
-  (MSE on old tasks grows 3–4 orders of magnitude); clone-and-adapt eliminates it
-  (p < 10⁻⁹ on 3 of 4 tasks, paired by seed).
-- Clone-and-adapt's convergence speedup is relatedness-dependent: 5.1× faster when
-  cloning from a closely related skill (powers ← multiplication), but *slower*
-  than random init when the parent is only weakly related (subtraction ← addition).
-- A genuine limitation surfaced: on powers, the cloned skill converged faster but
-  generalized *worse* than a from-scratch skill — likely a confound from the
-  "stop at 85% training accuracy" rule, not from cloning itself. Flagged as the
-  next thing to fix.
-
 ## Repo structure
 
 ```
