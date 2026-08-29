@@ -11,7 +11,7 @@ The script trains one skill for each source task, then evaluates every
 source -> target pair across the declared seeds. It reports both the original
 score threshold and the independent calibration accuracy criterion, plus a
 recommended score cutoff chosen on the calibration pairs to separate
-same-task (solved) from cross-task (not-solved) cases.
+actually-solved from unsolved cases.
 
 Outputs:
     results/compatibility_calibration.csv
@@ -55,10 +55,13 @@ def train_to_accuracy(net, X, y):
 def recommended_score_threshold(df: pd.DataFrame) -> float:
     """Choose a calibration-only score cutoff with best balanced accuracy.
 
-    Positives are same-task evaluations, which are the only cases that should
-    be eligible for zero-training reuse. Cross-task pairs are negatives. The
-    threshold is selected only from this calibration data; test data are never
-    involved.
+    Positives are evaluations that actually meet the independently measured
+    85%-accuracy solve criterion. This definition is task-agnostic: a
+    cross-task transfer is a positive whenever the source skill genuinely
+    solves the target on the independent calibration batch.
+
+    The threshold is selected only from calibration data; held-out test data
+    are never involved.
     """
     scores = np.sort(df["compatibility_score"].unique())
     candidates = np.concatenate(([0.0], scores, [1.0]))
@@ -101,7 +104,7 @@ def main():
                 score = compatibility_score(net, target_task, seed * 100 + target_index)
                 accuracy = net.accuracy(X_cal, y_cal, tol=ACC_TOL)
                 mse = net.mse(X_cal, y_cal)
-                solved = source_task == target_task and accuracy >= ACC_TARGET
+                solved = accuracy >= ACC_TARGET
                 original_reuse = score >= TAU_SOLVE
                 rows.append(
                     {
