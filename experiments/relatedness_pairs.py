@@ -61,8 +61,6 @@ TASK_SEED_INDEX = {
     "division": 5,
 }
 
-# Fixed target, varying prior history.  The third column is only a compact
-# human-readable label; it is not used to force any experimental outcome.
 CONDITIONS = [
     ("subtraction", (), "none"),
     ("subtraction", ("addition",), "addition"),
@@ -90,23 +88,11 @@ def train_to_accuracy(net, X, y):
 
 def _task_seed(seed: int, condition_index: int, task: str, offset: int = 0) -> int:
     """Deterministically separate task/history data roles and conditions."""
-    return (
-        seed * 100_000
-        + condition_index * 1_000
-        + TASK_SEED_INDEX[task]
-        + offset
-    )
+    return seed * 100_000 + condition_index * 1_000 + TASK_SEED_INDEX[task] + offset
 
 
 def acquire_prior_skills(prior_tasks, seed: int, condition_index: int):
-    """Train each prerequisite independently from scratch before target learning.
-
-    This deliberately makes the prior history explicit: addition and
-    multiplication are both acquired before the target, but neither is itself
-    obtained by cloning the other.  Thus the history condition tests the value
-    of having those learned representations available, not a hidden curriculum
-    effect from the controller used to acquire the prerequisites.
-    """
+    """Train each prerequisite independently from scratch before target learning."""
     skills = {}
     prior_rows = []
     for task in prior_tasks:
@@ -152,8 +138,6 @@ def run_condition(target: str, prior_tasks: tuple[str, ...], history_label: str,
         net.reset_optimizer()
         steps, success = train_to_accuracy(net, X_target, y_target)
 
-    # Held-out final evaluation is separate from target training and all
-    # controller probe/calibration batches.
     test_seed = _task_seed(seed, condition_index, target, offset=40_000)
     X_test, y_test = sample_task(target, N_EVAL, seed=test_seed)
     test_acc = float(net.accuracy(X_test, y_test, tol=ACC_TOL))
@@ -185,15 +169,13 @@ def run_all_conditions(n_seeds: int = N_SEEDS):
     rows = []
     for condition_index, (target, prior_tasks, history_label) in enumerate(CONDITIONS):
         for seed in range(n_seeds):
-            rows.append(run_condition(
-                target, prior_tasks, history_label, seed, condition_index
-            ))
+            rows.append(run_condition(target, prior_tasks, history_label, seed, condition_index))
     return rows
 
 
 def summarize(raw: pd.DataFrame) -> pd.DataFrame:
     rows = []
-    for target, history, group in raw.groupby(
+    for (target, history), group in raw.groupby(
         ["target_task", "prior_history"], sort=False
     ):
         rows.append({
@@ -212,13 +194,9 @@ def summarize(raw: pd.DataFrame) -> pd.DataFrame:
             "clone_count": int((group["strategy"] == "clone").sum()),
             "scratch_count": int((group["strategy"] == "scratch").sum()),
         })
-    order = {
-        (target, history): i
-        for i, (target, _, history) in enumerate(CONDITIONS)
-    }
+    order = {(target, history): i for i, (target, _, history) in enumerate(CONDITIONS)}
     summary = pd.DataFrame(rows)
-    summary["_order"] = [order[(r.target_task, r.prior_history)]
-                          for r in summary.itertuples()]
+    summary["_order"] = [order[(r.target_task, r.prior_history)] for r in summary.itertuples()]
     return summary.sort_values("_order").drop(columns="_order").reset_index(drop=True)
 
 
@@ -228,8 +206,7 @@ def make_plot(summary: pd.DataFrame, out_path: Path):
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots(figsize=(8, 5))
-    labels = [f"{r.target_task}\n{r.prior_history}"
-              for r in summary.itertuples()]
+    labels = [f"{r.target_task}\n{r.prior_history}" for r in summary.itertuples()]
     ax.bar(range(len(summary)), summary["acquisition_success_rate"])
     ax.set_xticks(range(len(summary)))
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
