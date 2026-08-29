@@ -4,11 +4,15 @@ tasks.py
 Section 8's minimal curriculum: addition -> subtraction -> multiplication -> powers.
 Each task T is a distribution over (a, b) -> op(a, b).
 
-Design choice (not specified in the issue, chosen here):
-  - operands a, b are drawn from small integer ranges so a tiny MLP can fit them
-  - inputs are fed to the network scaled by /10 (keeps tanh layer out of saturation);
-    targets are left in natural units since the output layer is linear
-  - "powers" uses small integer base/exponent to keep targets bounded
+The prerequisite-acquisition follow-up also uses division and squares as target
+experiments without changing TASK_ORDER, so the historical Phase 4 curriculum
+results remain reproducible.
+
+Design choices:
+  - operands are drawn from small integer ranges so a tiny MLP can fit them
+  - inputs are scaled by /10 to keep the tanh layer out of saturation
+  - targets are left in natural units since the output layer is linear
+  - powers uses small base/exponent values to keep targets bounded
 """
 from __future__ import annotations
 import numpy as np
@@ -21,6 +25,7 @@ _RANGES = {
     "multiplication": ((0, 10), (0, 10)),
     "powers": ((0, 5), (0, 3)),  # base 0-4, exponent 0-2
     "squares": ((0, 10), (0, 10)),
+    "division": ((0, 25), (1, 6)),  # nonzero divisor, bounded quotient
 }
 
 
@@ -38,6 +43,11 @@ def _op(task: str, a: np.ndarray, b: np.ndarray) -> np.ndarray:
         # It is structurally related to multiplication while leaving the second
         # input available so all tasks share the same model interface.
         return np.square(a.astype(float))
+    if task == "division":
+        # Divisor is guaranteed nonzero by _RANGES.  Fractional outputs are
+        # intentional: division should be a distinct target, not integer
+        # quotient classification disguised as arithmetic.
+        return a.astype(float) / b.astype(float)
     raise ValueError(f"unknown task {task}")
 
 
