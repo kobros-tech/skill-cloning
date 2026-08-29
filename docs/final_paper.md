@@ -4,7 +4,7 @@
 
 Continual acquisition systems must learn new skills without unnecessarily discarding useful prior knowledge. This study evaluates a small, reproducible skill-acquisition framework in which an incoming task is handled by one of three routes: reuse an existing skill when it already solves the target, clone a related skill and adapt it when reuse is insufficient, or learn from a fresh initialization when prior knowledge is not useful. The experiments use small arithmetic regression tasks and matched random seeds to separate acquisition reliability, acquisition efficiency, and retention.
 
-The central result is that prior knowledge is not uniformly beneficial: the observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both substantial positive transfer and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. The retention checks verify a narrower architectural property: under the tested isolated-skill mechanism, previously acquired skill parameters remain unchanged while later skills are acquired. This is an implementation/invariance check rather than evidence that catastrophic forgetting is impossible in continual-learning systems generally.
+The central result is that prior knowledge is not uniformly beneficial: the observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. The expanded fixed-target prerequisite design provides the current authoritative quantitative evidence: powers benefit from additional prior history, whereas division exhibits negative transfer and squares remains difficult. The retention checks verify a narrower architectural property: under the tested isolated-skill mechanism, previously acquired skill parameters remain unchanged while later skills are acquired. This is an implementation/invariance check rather than evidence that catastrophic forgetting is impossible in continual-learning systems generally.
 
 ## 1. Introduction
 
@@ -95,7 +95,7 @@ This separation is important for difficult targets such as squares, where a meth
 For an acquired skill $s_i$, let $\theta_i^{\mathrm{pre}}$ and $\theta_i^{\mathrm{post}}$ denote its stored parameters immediately before and after a later skill is acquired. The intended isolated-skill invariant is:
 
 $$
-\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}},
+\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}}.
 $$
 
 or equivalently,
@@ -128,13 +128,13 @@ Experiments use matched deterministic seeds. The main relatedness and retention 
 
 ## 3. Research design
 
-### 3.1 Relatedness and prior-history experiments
+### 3.1 Historical relatedness analysis and authoritative fixed-target matrix
 
-The initial source-target experiments examined multiplication → squares, multiplication → powers, addition → subtraction, and addition → multiplication. These results motivated a stronger fixed-target design: hold the target fixed and vary the prior-skill history.
+The initial source-target experiments examined multiplication → squares, multiplication → powers, addition → subtraction, and addition → multiplication. These results are retained as a **historical relatedness analysis** and are useful for showing that transfer can be heterogeneous.
 
-The prerequisite matrix includes each of subtraction, division, squares, and powers under three histories: no prior skill, addition only, and addition + multiplication. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
+The **expanded fixed-target prerequisite matrix is the authoritative current quantitative analysis**. It holds the target fixed and varies the prior-skill history across no prior skill, addition only, and addition + multiplication. The matrix includes subtraction, division, squares, and powers. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
 
-The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target.
+The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target under the stated protocol.
 
 ### 3.2 Retention and catastrophic forgetting
 
@@ -146,29 +146,46 @@ A genuine empirical test of resistance to interference would require an at-risk 
 
 ## 4. Results
 
-### 4.1 Transfer is relationship-dependent
+### 4.1 Historical relatedness-pair results
 
-The earlier relatedness-pair experiment produced heterogeneous transfer. Multiplication → powers showed a mean paired speedup of approximately 2.31×, while multiplication → squares showed approximately 1.26×. Addition → subtraction instead produced approximately 0.33×, meaning clone-and-adapt was slower than scratch. Addition → multiplication was approximately 1.12×.
+The earlier relatedness-pair experiment produced heterogeneous transfer. Multiplication → powers showed a mean paired speedup of approximately 2.31×, multiplication → squares approximately 1.26×, addition → subtraction approximately 0.33×, and addition → multiplication approximately 1.12×.
 
-These observations do not support a simple monotonic rule in which a larger frozen compatibility score always predicts a larger transfer benefit. In particular, a frozen output-compatibility measure and usefulness as a parameter initialization are not necessarily the same property.
+These observations are explicitly **historical relatedness results**. They are not mixed with the newer fixed-target matrix and should not be interpreted as the current controller's final quantitative summary. They also do not support a simple monotonic rule in which a larger frozen compatibility score always predicts a larger transfer benefit.
 
-### 4.2 Retention mechanism check
+### 4.2 Authoritative fixed-target prerequisite matrix
+
+The current fixed-target experiment provides the main quantitative evidence for how additional prior history affects acquisition. The authoritative values are:
+
+| Target | No prior skill | Addition only | Addition + Multiplication |
+|---|---:|---:|---:|
+| Subtraction | 33.5 epochs | 62.3 epochs | 73.2 epochs |
+| Division | 515.2 epochs | 616.2 epochs | 617.5 epochs |
+| Squares | 20.0% success | 20.0% success | 13.3% success |
+| Powers | 471.6 epochs | 355.2 epochs | 237.3 epochs |
+
+For subtraction, division, and powers, the values are acquisition epochs to the declared criterion. Squares is reported as success rate because many runs do not reach the acquisition criterion within the allowed budget.
+
+The matrix shows heterogeneous transfer rather than a universal benefit from additional prior knowledge. Powers improves substantially as prior history expands, while division becomes slower and squares remains difficult. These results support the conclusion that transfer depends on the source-target relationship and that additional prior skills can introduce negative transfer.
+
+These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
+
+### 4.3 Retention mechanism check
 
 The retention run reports zero change in the repeated pre/post checks and a 100% pass rate under the five-percentage-point practical tolerance. These values are consistent with the implementation invariant that previously acquired skills are stored independently and are not modified while a new skill is adapted.
 
-Because the same unchanged skill is evaluated on the same skill-specific retention set before and after later acquisitions, the resulting zero change is **not an independent empirical estimate of protection against catastrophic forgetting**. It is a verification that the isolation mechanism and evaluation protocol behave as intended. We therefore do not report bootstrap confidence intervals or effect sizes for the retention delta as evidence of a population-level effect.
+Because the same unchanged skill is evaluated on the same skill-specific retention set before and after later acquisitions, the resulting zero change is **not an independent empirical estimate of protection against catastrophic forgetting**. It is a verification that the isolation mechanism and evaluation protocol behave as intended. We therefore do not report bootstrap confidence intervals or effect sizes for the retention delta as evidence of an interference effect.
 
-### 4.3 Acquisition efficiency and reliability
+### 4.4 Acquisition efficiency and reliability
 
 Acquisition speed is treated as a secondary outcome. A small speedup is not automatically practically important, and reliability is evaluated separately from efficiency. A strong acquisition result is one in which prior knowledge increases fixed-budget success or substantially reduces training cost without sacrificing final held-out performance.
 
-The earlier experiments illustrate why these outcomes must remain separate: clone initialization can reach an early training threshold much faster while the resulting model quality depends on the stopping and evaluation protocol. The fixed-budget follow-up therefore provides an important control against interpreting early threshold crossing as a universal quality improvement.
+The fixed-target matrix is the primary current evidence for history-dependent acquisition behavior. The earlier relatedness-pair speedups remain useful contextual evidence, but they should not be interpreted as replacements for the expanded fixed-target analysis.
 
 ## 5. Statistical analysis
 
 For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries include the mean paired difference, variability, interval estimates, effect sizes, and paired significance tests where appropriate for the acquisition comparisons.
 
-The retention check is intentionally treated differently. Its primary diagnostic quantity is $\Delta_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}$, where accuracy is measured on the same held-out retention set for the same skill and seed. The practical diagnostic rule used by the experiment is $\Delta_i\geq-0.05$.
+The retention check is intentionally treated differently. Its primary diagnostic quantity is $\Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}$, where accuracy is measured on the same held-out retention set for the same skill and seed. The practical diagnostic rule used by the experiment is $\Delta A_i\geq-0.05$.
 
 This five-percentage-point value is a declared practical tolerance. It is not a statistical equivalence margin and is not used to claim that the architecture has been shown equivalent in performance before and after acquisition.
 
@@ -180,9 +197,11 @@ The combined findings support a simple design principle: a continual skill-acqui
 
 The three-route controller is therefore important. Reuse is appropriate when an existing skill genuinely solves the target. Clone-and-adapt provides a way to exploit a useful initialization without modifying the parent. Scratch remains necessary because prior knowledge can be irrelevant or negatively transferable.
 
+The authoritative fixed-target results strengthen this interpretation: Powers benefits from additional prior history, while Division exhibits negative transfer and Squares remains difficult. This heterogeneity is scientifically important because it prevents the paper from reducing the conclusion to "cloning always helps."
+
 The retention checks provide implementation-level evidence that the independent-skill storage mechanism preserves stored parent parameters during later acquisition. They should not be confused with a comparative forgetting experiment. Demonstrating robustness to interference would require a condition in which later learning can actually alter parameters supporting earlier skills.
 
-At the same time, the heterogeneous transfer results show that the harder scientific question is not simply whether cloning works. It is **why some skills benefit from prior knowledge while others do not**. That question is intentionally separated from the present paper's main acquisition-and-retention objective and can form a follow-up study based on the present experimental framework.
+At the same time, the heterogeneous transfer results show that the harder scientific question is not simply whether cloning works. It is **why some skills benefit from prior knowledge while others do not**. That question can form a follow-up study based on the present experimental framework.
 
 ## 7. Limitations and threats to validity
 
@@ -203,7 +222,7 @@ The repository contains the experiment drivers, regression tests, workflow confi
 
 This prototype demonstrates a controlled approach to continual skill acquisition in which the system can choose among reuse, clone-and-adapt, and scratch learning while preserving previously acquired skills through independent storage.
 
-The most defensible conclusion is not that cloning always improves learning, nor that catastrophic forgetting has been eliminated. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, while the isolated-skill mechanism preserves previously stored skills during later acquisition as an implementation invariant under the tested conditions.
+The most defensible conclusion is not that cloning always improves learning, nor that catastrophic forgetting has been eliminated. Instead, the authoritative fixed-target experiments show that prior history can have positive or negative effects depending on the target: powers benefit from additional prior skills, while division exhibits negative transfer and squares remains difficult. The isolated-skill mechanism preserves previously stored skills during later acquisition as an implementation invariant under the tested conditions.
 
 The work therefore establishes a useful experimental foundation for a broader research program: first characterize reliable skill acquisition and the conditions under which transfer helps or hurts, then test interference resistance using explicit at-risk baselines and broader task families.
 
@@ -220,4 +239,3 @@ The work therefore establishes a useful experimental foundation for a broader re
 - [x] CI executes the retention experiment and regression tests.
 - [x] Retention claims explicitly separated from statistical evidence of interference resistance.
 - [ ] An at-risk shared-network retention comparison is outside the scope of this PR and should be added only as a separate, explicitly controlled experiment.
-- [ ] Final prerequisite-matrix expansion and its final statistical tables should be included only after that experiment is the authoritative merged result.
