@@ -38,11 +38,11 @@ Let the incoming target task be $T$ and let the repository contain previously ac
 For a target probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
 
 $$
-\operatorname{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}\left(f(x_j;\theta_i)-y_j\right)^2
+\mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}\left(f(x_j;\theta_i)-y_j\right)^2
 $$
 
 $$
-P(T\mid s_i)=\exp\left(-\frac{\operatorname{MSE}(T,s_i)}{60}\right).
+P(T\mid s_i)=\exp\left(-\frac{\mathrm{MSE}(T,s_i)}{60}\right).
 $$
 
 The compatibility score is computed without updating $\theta_i$. It therefore measures how well the frozen parent already matches the target, rather than how useful its internal representation will necessarily be after adaptation.
@@ -50,7 +50,7 @@ The compatibility score is computed without updating $\theta_i$. It therefore me
 Let $A(T,s_i)$ denote the independent target-solve accuracy used by the corrected reuse gate. With thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects an action according to:
 
 $$
-\operatorname{action}(T,s_i)=
+\mathrm{action}(T,s_i)=
 \begin{cases}
 \mathrm{reuse} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{solve}} \text{ and } A(T,s_i)\geq 0.85,\\
 \mathrm{clone} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{clone}} \text{ and the reuse condition is not satisfied},\\
@@ -168,17 +168,7 @@ The earlier experiments illustrate why these outcomes must remain separate: clon
 
 For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries include the mean paired difference, variability, interval estimates, effect sizes, and paired significance tests where appropriate for the acquisition comparisons.
 
-The retention check is intentionally treated differently. Its primary diagnostic quantity is:
-
-$$
-\Delta_i = A_{i,\mathrm{post}} - A_{i,\mathrm{pre}}.
-$$
-
-The practical diagnostic rule used by the experiment is:
-
-$$
-\Delta_i \geq -0.05.
-$$
+The retention check is intentionally treated differently. Its primary diagnostic quantity is $\Delta_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}$, where accuracy is measured on the same held-out retention set for the same skill and seed. The practical diagnostic rule used by the experiment is $\Delta_i\geq-0.05$.
 
 This five-percentage-point value is a declared practical tolerance. It is not a statistical equivalence margin and is not used to claim that the architecture has been shown equivalent in performance before and after acquisition.
 
