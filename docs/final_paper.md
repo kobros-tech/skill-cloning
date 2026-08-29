@@ -4,20 +4,20 @@
 
 Continual acquisition systems must learn new skills without unnecessarily discarding useful prior knowledge. This study evaluates a small, reproducible skill-acquisition framework in which an incoming task is handled by one of three routes: reuse an existing skill when it already solves the target, clone a related skill and adapt it when reuse is insufficient, or learn from a fresh initialization when prior knowledge is not useful. The experiments use small arithmetic regression tasks and matched random seeds to separate acquisition reliability, acquisition efficiency, and retention.
 
-The central result is that prior knowledge is not uniformly beneficial: the observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both substantial positive transfer and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. The retention experiment then evaluated whether previously acquired skills remained usable after subsequent acquisitions. Under the tested isolated-skill architecture, no measurable degradation was observed in the retention checks. This supports the narrower claim that the proposed isolation mechanism can acquire additional skills without overwriting the parameters of previously stored skills; it does not establish that catastrophic forgetting is impossible in continual-learning systems generally.
+The central result is that prior knowledge is not uniformly beneficial: the observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both substantial positive transfer and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. The retention checks verify a narrower architectural property: under the tested isolated-skill mechanism, previously acquired skill parameters remain unchanged while later skills are acquired. This is an implementation/invariance check rather than evidence that catastrophic forgetting is impossible in continual-learning systems generally.
 
 ## 1. Introduction
 
 A continual-learning system should be able to acquire a new capability while preserving capabilities that it has already learned. A simple shared-network strategy can update parameters for every new task, making the system vulnerable to interference. An alternative is to treat each learned capability as an independently stored skill and decide, for each incoming task, whether an existing skill should be reused, cloned and adapted, or whether learning should begin from scratch.
 
-This work studies that mechanism as a controlled research prototype. The goal is not to claim a universal theory of prerequisites or a universal advantage for cloning. Instead, the experiments ask when previously acquired skills help, when they do not, and whether adding a new skill damages previously acquired ones.
+This work studies that mechanism as a controlled research prototype. The goal is not to claim a universal theory of prerequisites or a universal advantage for cloning. Instead, the experiments ask when previously acquired skills help, when they do not, and whether the proposed isolated-skill mechanism preserves earlier skills during subsequent acquisition.
 
 The research is organized around four questions:
 
 1. Can a new target skill be acquired reliably?
 2. Can an already-solved target be reused without additional training?
 3. When reuse is not possible, does cloning provide a useful initialization compared with scratch learning?
-4. Does acquiring a new skill cause measurable degradation of earlier skills?
+4. Does the isolated-skill mechanism preserve previously acquired skills during later acquisition?
 
 ## 2. Experimental system
 
@@ -37,7 +37,7 @@ The experiment separates target-training data, compatibility-probe data, solve/a
 
 ### Seeds
 
-Experiments use matched deterministic seeds. The main relatedness and retention experiments use 15 seeds per condition. Pairing by seed allows within-seed comparisons between acquisition strategies and retention measurements.
+Experiments use matched deterministic seeds. The main relatedness and retention checks use 15 seeds per condition. Pairing by seed allows within-seed comparisons between acquisition strategies where applicable.
 
 ## 3. Research design
 
@@ -51,17 +51,11 @@ The interpretation is deliberately conservative. A curriculum order is not treat
 
 ### 3.2 Retention and catastrophic forgetting
 
-The retention experiment evaluates sequential acquisition. After each new skill is acquired, every previously acquired skill is evaluated again on its own stable, skill-specific evaluation set. For each old skill we record:
+The retention code performs sequential acquisition and re-evaluates every previously acquired skill after each later acquisition on a stable, skill-specific evaluation set. This verifies the intended isolation invariant: a stored parent skill is not modified when a later skill is trained as an independent copy.
 
-- pre-acquisition accuracy;
-- post-acquisition accuracy;
-- absolute retention change;
-- retention ratio;
-- whether the change stays within the predeclared five-percentage-point practical tolerance.
+For each retention check the implementation records pre/post accuracy, accuracy change, retention ratio, and whether the change remains within a predeclared five-percentage-point practical tolerance. These measurements are useful diagnostics of the invariant, but they should not be interpreted as a conventional statistical test of forgetting because the isolated-skill architecture does not expose the stored parent to subsequent optimization. In particular, repeated evaluation of an unchanged network on a stable evaluation set is expected to produce the same result.
 
-The same evaluation set is used for the paired pre/post comparison of a given skill, preventing changes in the evaluation sample from being mistaken for learning or forgetting.
-
-The experiment does not assume that forgetting is absent. Negative retention is recorded as a valid outcome. The result is therefore an empirical measurement rather than a construction of a desired answer.
+A genuine empirical test of resistance to interference would require an at-risk comparison arm in which later learning can modify previously learned parameters, such as the shared-network baseline. That comparison is outside the scope of this final documentation PR and is not claimed here.
 
 ## 4. Results
 
@@ -71,13 +65,11 @@ The earlier relatedness-pair experiment produced heterogeneous transfer. Multipl
 
 These observations do not support a simple monotonic rule in which a larger frozen compatibility score always predicts a larger transfer benefit. In particular, a frozen output-compatibility measure and usefulness as a parameter initialization are not necessarily the same property.
 
-### 4.2 Retention
+### 4.2 Retention mechanism check
 
-The retention experiment evaluated four representative three-skill sequences across 15 seeds. The generated retention summary reported zero mean accuracy change for the measured retention checks, with a 100% retention-pass rate under the predeclared five-percentage-point tolerance. The corresponding bootstrap intervals were degenerate at zero in the reported checks.
+The retention run reports zero change in the repeated pre/post checks and a 100% pass rate under the five-percentage-point practical tolerance. These values are consistent with the implementation invariant that previously acquired skills are stored independently and are not modified while a new skill is adapted.
 
-The correct interpretation is narrow: **no measurable catastrophic forgetting was observed under the tested isolated-skill mechanism and evaluation protocol.** The result is consistent with the implementation design in which a previously acquired skill is stored independently and is not modified when a new skill is adapted.
-
-This should not be phrased as proof that catastrophic forgetting is impossible. It demonstrates that the tested architecture can add new skills while preserving the measured performance of previously stored skills.
+Because the same unchanged skill is evaluated on the same skill-specific retention set before and after later acquisitions, the resulting zero change is **not an independent empirical estimate of protection against catastrophic forgetting**. It is a verification that the isolation mechanism and evaluation protocol behave as intended. We therefore do not report bootstrap confidence intervals or effect sizes for the retention delta as evidence of a population-level effect.
 
 ### 4.3 Acquisition efficiency and reliability
 
@@ -87,23 +79,23 @@ The earlier experiments illustrate why these outcomes must remain separate: clon
 
 ## 5. Statistical analysis
 
-For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries should include the mean paired difference, standard deviation, confidence or bootstrap interval, effect size, and an appropriate paired significance test where sample size and distributional assumptions permit.
+For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries include the mean paired difference, variability, interval estimates, effect sizes, and paired significance tests where appropriate for the acquisition comparisons.
 
-For retention, the primary quantity is:
+The retention check is intentionally treated differently. Its primary diagnostic quantity is:
 
 \[
 \Delta_i = A_{i,\mathrm{post}} - A_{i,\mathrm{pre}},
 \]
 
-where accuracy is measured on the same held-out retention set for the same skill and seed. The practical retention rule used by the experiment is:
+where accuracy is measured on the same held-out retention set for the same skill and seed. The practical diagnostic rule used by the experiment is:
 
 \[
 \Delta_i \ge -0.05.
 \]
 
-This five-percentage-point value is a practical tolerance, not a claim of statistical equivalence. Statistical intervals and effect sizes should accompany it.
+This five-percentage-point value is a declared practical tolerance. It is not a statistical equivalence margin and is not used to claim that the architecture has been shown equivalent in performance before and after acquisition.
 
-Success rate is reported separately from convergence speed. If all conditions reach the fixed budget successfully, training cost and convergence distributions become the more informative secondary outcomes.
+Because the isolated parent network is not modified between the two evaluations, a zero retention delta is an expected consequence of the mechanism. Statistical inference on this delta would therefore not answer the stronger scientific question of whether a system resists interference when interference is possible.
 
 ## 6. Discussion
 
@@ -111,7 +103,7 @@ The combined findings support a simple design principle: a continual skill-acqui
 
 The three-route controller is therefore important. Reuse is appropriate when an existing skill genuinely solves the target. Clone-and-adapt provides a way to exploit a useful initialization without modifying the parent. Scratch remains necessary because prior knowledge can be irrelevant or negatively transferable.
 
-The retention result strengthens the continual-learning interpretation of the mechanism. Learning a new skill does not require sacrificing the old one when skills are isolated and stored independently. This is particularly important because the purpose of skill acquisition is not merely to produce one successful new model; it is to accumulate capabilities over time.
+The retention checks provide implementation-level evidence that the independent-skill storage mechanism preserves stored parent parameters during later acquisition. They should not be confused with a comparative forgetting experiment. Demonstrating robustness to interference would require a condition in which later learning can actually alter parameters supporting earlier skills.
 
 At the same time, the heterogeneous transfer results show that the harder scientific question is not simply whether cloning works. It is **why some skills benefit from prior knowledge while others do not**. That question is intentionally separated from the present paper's main acquisition-and-retention objective and can form a follow-up study based on the present experimental framework.
 
@@ -121,10 +113,10 @@ At the same time, the heterogeneous transfer results show that the harder scient
 2. **Small model.** Results may depend on the architecture, parameter count, optimizer, and training dynamics.
 3. **Finite seeds.** Fifteen seeds provide useful matched comparisons but do not establish universal population-level behavior.
 4. **Controller dependence.** The results depend on the compatibility probe, thresholds, and solved-target gate.
-5. **Retention protocol.** The absence of measured forgetting is conditional on the independent-skill storage mechanism and the tested sequence lengths.
+5. **Retention protocol.** The retention checks verify the tested isolation mechanism; they do not test an at-risk interference condition in which parent parameters can be overwritten.
 6. **No universal prerequisite claim.** Earlier acquisition in a curriculum is evidence about transfer under that protocol, not proof of a formal prerequisite relationship.
 7. **Potential task-family confounds.** Arithmetic tasks share representations and input structure, so transfer behavior may differ substantially in other domains.
-8. **Practical tolerance.** The five-percentage-point retention tolerance is a declared practical criterion, not a statistical equivalence margin derived from an external validation study.
+8. **Practical tolerance.** The five-percentage-point retention tolerance is a declared diagnostic criterion, not a statistical equivalence margin derived from an external validation study.
 
 ## 8. Reproducibility
 
@@ -134,9 +126,9 @@ The repository contains the experiment drivers, regression tests, workflow confi
 
 This prototype demonstrates a controlled approach to continual skill acquisition in which the system can choose among reuse, clone-and-adapt, and scratch learning while preserving previously acquired skills through independent storage.
 
-The most defensible conclusion is not that cloning always improves learning. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, while the isolated-skill mechanism can add new capabilities without measurable degradation of previously stored skills under the tested conditions.
+The most defensible conclusion is not that cloning always improves learning, nor that catastrophic forgetting has been eliminated. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, while the isolated-skill mechanism preserves previously stored skills during later acquisition as an implementation invariant under the tested conditions.
 
-The work therefore establishes a useful experimental foundation for a broader research program: first characterize reliable skill acquisition and retention, then investigate the factors that determine why one skill transfers well and another does not.
+The work therefore establishes a useful experimental foundation for a broader research program: first characterize reliable skill acquisition and the conditions under which transfer helps or hurts, then test interference resistance using explicit at-risk baselines and broader task families.
 
 ## 10. Reproducibility checklist
 
@@ -149,4 +141,6 @@ The work therefore establishes a useful experimental foundation for a broader re
 - [x] Retention tolerance declared before interpretation.
 - [x] Per-seed retention data and summary outputs generated.
 - [x] CI executes the retention experiment and regression tests.
+- [x] Retention claims explicitly separated from statistical evidence of interference resistance.
+- [ ] An at-risk shared-network retention comparison is outside the scope of this PR and should be added only as a separate, explicitly controlled experiment.
 - [ ] Final prerequisite-matrix expansion and its final statistical tables should be included only after that experiment is the authoritative merged result.
