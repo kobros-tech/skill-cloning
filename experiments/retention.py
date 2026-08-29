@@ -37,7 +37,6 @@ TASK_SEED_INDEX = {
     "division": 5,
 }
 
-# Representative sequences from the existing task family.
 SEQUENCES = [
     ("addition", "multiplication", "division"),
     ("addition", "multiplication", "squares"),
@@ -100,10 +99,8 @@ def _acquire_target(skills, target, seed, sequence_index, stage):
 
 
 def _retention_accuracy(skill, task, seed, sequence_index, skill_stage):
-    """Evaluate a skill on a stable, skill-specific retention set."""
-    eval_seed = _task_seed(
-        seed, sequence_index, skill_stage, task, offset=40_000
-    )
+    """Evaluate on a stable skill-specific retention set across later stages."""
+    eval_seed = _task_seed(seed, sequence_index, skill_stage, task, offset=40_000)
     X, y = sample_task(task, N_EVAL, seed=eval_seed)
     return float(skill.net.accuracy(X, y, tol=ACC_TOL))
 
@@ -127,19 +124,13 @@ def run_sequence(sequence: tuple[str, ...], seed: int, sequence_index: int):
                 skills[target], target, seed, sequence_index, stage
             )
 
-        # Re-evaluate every skill that existed before/after this stage on its
-        # own fixed retention set.  For a newly acquired skill, pre==post is
-        # the baseline measurement at acquisition time.
         for old_task, old_skill in skills.items():
             post_accuracy = _retention_accuracy(
                 old_skill, old_task, seed, sequence_index, skill_stage[old_task]
             )
-            if old_task == target and skill_stage[old_task] == stage:
-                pre_accuracy = post_accuracy
-                delta = 0.0
-            else:
-                pre_accuracy = baseline_accuracy[old_task]
-                delta = post_accuracy - pre_accuracy
+            is_baseline = old_task == target and skill_stage[old_task] == stage
+            pre_accuracy = post_accuracy if is_baseline else baseline_accuracy[old_task]
+            delta = 0.0 if is_baseline else post_accuracy - pre_accuracy
 
             rows.append({
                 "sequence": "→".join(sequence),
@@ -148,6 +139,8 @@ def run_sequence(sequence: tuple[str, ...], seed: int, sequence_index: int):
                 "stage": stage,
                 "new_task": target,
                 "evaluated_skill": old_task,
+                "skill_stage": skill_stage[old_task],
+                "is_retention_check": not is_baseline,
                 "strategy": acquisition["strategy"],
                 "source_task": acquisition["source_task"],
                 "compatibility_score": acquisition["compatibility_score"],
@@ -185,13 +178,13 @@ def bootstrap_ci(values, seed: int):
 
 
 def summarize(raw: pd.DataFrame) -> pd.DataFrame:
+    """Summarize only post-acquisition retention checks, excluding baselines."""
+    retention = raw[raw["is_retention_check"]].copy()
     rows = []
     group_cols = ["sequence", "stage", "new_task", "evaluated_skill"]
-    for group_key, group in raw.groupby(group_cols, sort=False):
+    for group_index, (group_key, group) in enumerate(retention.groupby(group_cols, sort=False)):
         values = group["retention_delta"].to_numpy(dtype=float)
-        ci_low, ci_high = bootstrap_ci(
-            values, seed=int(group["stage"].iloc[0]) + group_key[0].__hash__() % 10_000
-        )
+        ci_low, ci_high = bootstrap_ci(values, seed=12_345 + group_index)
         std = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
         effect = float(np.mean(values) / std) if std > 0 else np.nan
         rows.append({
