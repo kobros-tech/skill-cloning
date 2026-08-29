@@ -1,34 +1,4 @@
-"""Sequential skill-retention experiment for Issue #3 / PR #5.
-
-The experiment asks whether previously acquired skills remain usable after
-new skills are acquired.  It uses the same TinyMLP, task family, controller,
-training budget, and seed conventions as the prerequisite acquisition
-experiment in ``relatedness_pairs.py``.
-
-For each sequence and seed:
-
-1. acquire the next skill with the corrected reuse/clone/scratch controller;
-2. evaluate every acquired skill on its own independent retention set;
-3. compare each skill's accuracy with its pre-new-learning baseline;
-4. record the paired retention change.
-
-A 5 percentage-point absolute accuracy drop is the predeclared practical
-retention tolerance.  With 300 deterministic evaluation examples this is a
-conservative practical threshold rather than a claim about universal
-statistical equivalence.  The report also includes bootstrap confidence
-intervals and a standardized paired effect size, so the threshold is not the
-sole basis for interpretation.
-
-This experiment does not modify previously stored Skill objects during target
-adaptation: clone and scratch create a new network, while reuse performs no
-adaptation.  The experiment nevertheless measures retention directly rather
-than inferring it from that implementation detail.
-
-Outputs:
-    results/retention.csv
-    results/retention_summary.csv
-    results/plot_retention.png
-"""
+"""Sequential skill-retention experiment for Issue #3 / PR #5."""
 from __future__ import annotations
 
 import sys
@@ -54,6 +24,7 @@ LR = 0.02
 MAX_EPOCHS = 1500
 ACC_TOL = 0.5
 ACC_TARGET = 0.85
+# Predeclared practical tolerance: five percentage points of absolute accuracy.
 RETENTION_TOLERANCE = 0.05
 BOOTSTRAP_SAMPLES = 2000
 
@@ -66,8 +37,7 @@ TASK_SEED_INDEX = {
     "division": 5,
 }
 
-# Representative sequences from the existing task family.  They exercise
-# short sequential learning while keeping the PR focused and reproducible.
+# Representative sequences from the existing task family.
 SEQUENCES = [
     ("addition", "multiplication", "division"),
     ("addition", "multiplication", "squares"),
@@ -129,16 +99,20 @@ def _acquire_target(skills, target, seed, sequence_index, stage):
     )
 
 
-def _retention_accuracy(skill, task, seed, sequence_index, stage):
-    eval_seed = _task_seed(seed, sequence_index, stage, task, offset=40_000)
+def _retention_accuracy(skill, task, seed, sequence_index, skill_stage):
+    """Evaluate a skill on a stable, skill-specific retention set."""
+    eval_seed = _task_seed(
+        seed, sequence_index, skill_stage, task, offset=40_000
+    )
     X, y = sample_task(task, N_EVAL, seed=eval_seed)
     return float(skill.net.accuracy(X, y, tol=ACC_TOL))
 
 
 def run_sequence(sequence: tuple[str, ...], seed: int, sequence_index: int):
-    """Run one sequential acquisition and all pre/post retention checks."""
+    """Run one sequential acquisition and paired retention checks."""
     skills = {}
     baseline_accuracy = {}
+    skill_stage = {}
     rows = []
 
     for stage, target in enumerate(sequence):
@@ -146,20 +120,21 @@ def run_sequence(sequence: tuple[str, ...], seed: int, sequence_index: int):
             skills, target, seed, sequence_index, stage
         )
 
-        # A failed target is not added as an acquired skill.  Earlier skills
-        # are still re-tested after the attempted learning operation so that
-        # any accidental mutation is observable.
         if acquisition["acquisition_success"]:
             skills[target] = new_skill
+            skill_stage[target] = stage
             baseline_accuracy[target] = _retention_accuracy(
                 skills[target], target, seed, sequence_index, stage
             )
 
+        # Re-evaluate every skill that existed before/after this stage on its
+        # own fixed retention set.  For a newly acquired skill, pre==post is
+        # the baseline measurement at acquisition time.
         for old_task, old_skill in skills.items():
             post_accuracy = _retention_accuracy(
-                old_skill, old_task, seed, sequence_index, stage
+                old_skill, old_task, seed, sequence_index, skill_stage[old_task]
             )
-            if old_task == target and stage == 0:
+            if old_task == target and skill_stage[old_task] == stage:
                 pre_accuracy = post_accuracy
                 delta = 0.0
             else:
@@ -214,7 +189,9 @@ def summarize(raw: pd.DataFrame) -> pd.DataFrame:
     group_cols = ["sequence", "stage", "new_task", "evaluated_skill"]
     for group_key, group in raw.groupby(group_cols, sort=False):
         values = group["retention_delta"].to_numpy(dtype=float)
-        ci_low, ci_high = bootstrap_ci(values, seed=int(group["stage"].iloc[0]) + 12345)
+        ci_low, ci_high = bootstrap_ci(
+            values, seed=int(group["stage"].iloc[0]) + group_key[0].__hash__() % 10_000
+        )
         std = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
         effect = float(np.mean(values) / std) if std > 0 else np.nan
         rows.append({
