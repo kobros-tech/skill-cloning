@@ -26,13 +26,17 @@ uploaded as a downloadable `experiment-results` artifact on each run.
 - Catastrophic forgetting is real and large in the shared-network baseline
   (MSE on old tasks grows 3–4 orders of magnitude); clone-and-adapt eliminates it
   (p < 10⁻⁹ on 3 of 4 tasks, paired by seed).
-- Clone-and-adapt's convergence speedup is relatedness-dependent: 5.1× faster when
-  cloning from a closely related skill (powers ← multiplication), but *slower*
-  than random init when the parent is only weakly related (subtraction ← addition).
-- A genuine limitation surfaced: on powers, the cloned skill converged faster but
-  generalized *worse* than a from-scratch skill — likely a confound from the
-  "stop at 85% training accuracy" rule, not from cloning itself. Flagged as the
-  next thing to fix.
+- Clone-and-adapt's convergence speedup is relatedness-dependent in the original
+  experiment: 5.1× faster when cloning from a closely related skill (powers ←
+  multiplication), but slower than random init when the parent is only weakly
+  related (subtraction ← addition).
+- The fixed-budget follow-up shows that the original powers generalization gap
+  largely disappears at equal training budgets, so the original stopping-rule
+  comparison was confounded.
+- Independent review also identified a more fundamental controller issue:
+  `τ_solve=0.90` can classify a merely related but unsolved task as `reuse`.
+  PR #2 therefore audits/calibrates this decision rule before broader task-pair
+  experiments are added.
 
 ## Stopping-rule confound follow-up
 
@@ -60,20 +64,19 @@ Run it with:
 python experiments/stopping_rule_confound.py
 ```
 
-This follow-up is deliberately diagnostic: it should determine whether the
-observed powers generalization gap survives when training duration is controlled.
+This follow-up is deliberately diagnostic: it separates training-budget effects
+from initialization effects.
 
 ## Squares relatedness follow-up
 
-The stopping-rule follow-up is intentionally kept separate from the next
-relatedness question. `experiments/squares_relatedness.py` adds **squares** as an
-intermediate diagnostic task and tests cloning from **multiplication → squares**
-against a scratch initialization.
+`experiments/squares_relatedness.py` tests cloning from **multiplication → squares**
+against a scratch initialization. The squares task maps `(a, b)` to `a²` while
+retaining the same two-input model interface.
 
-The squares task maps `(a, b)` to `a²`. It is structurally related to multiplication
-while retaining the same two-input model interface. The experiment measures only
-convergence speed to the existing 85%-training-accuracy threshold; it does not
-change the main Phase 4 curriculum or use a test set to select a stopping budget.
+The experiment measures convergence speed to the existing 85%-training-accuracy
+threshold and does not use a test set to select a stopping budget. Across the
+original 15 seeds it provides an additional observation consistent with transfer
+from a structurally related parent.
 
 Outputs:
 
@@ -87,10 +90,42 @@ Run it with:
 python experiments/squares_relatedness.py
 ```
 
-The purpose is diagnostic: determine whether the additional related task provides
-another observation consistent with a relationship between task relatedness and
-transfer speedup. A positive result should not by itself establish a general law;
-the number of task pairs remains small.
+## Compatibility decision-rule calibration
+
+`experiments/compatibility_calibration.py` audits the original compatibility
+controller before more task pairs are added. The original `τ_solve` rule used a
+high frozen-skill compatibility score as sufficient evidence for zero-training
+`reuse`. This is not necessarily valid: a related task can have a high score
+without already being solved.
+
+The calibration experiment trains skills on the existing source tasks, evaluates
+every source → target pair, and records:
+
+- frozen compatibility score on the compatibility probe;
+- accuracy and MSE on an independent calibration batch;
+- whether the target is actually solved under the predeclared 85%-accuracy rule;
+- whether the original `τ_solve` would have selected `reuse`;
+- false-reuse decisions;
+- a calibration-only recommended score threshold.
+
+No held-out test data are used to select the threshold. The controller itself is
+also hardened so `reuse` requires both the compatibility threshold and the
+independent solved-task accuracy criterion.
+
+Outputs:
+
+- `results/compatibility_calibration.csv` — per-seed, per-source/target diagnostics.
+- `results/compatibility_calibration_summary.csv` — original vs calibration-only
+  threshold and false-reuse counts.
+
+Run it with:
+
+```bash
+python experiments/compatibility_calibration.py
+```
+
+Regression tests cover the key failure mode: a high compatibility score with
+insufficient target accuracy must not trigger zero-training reuse.
 
 ## Repo structure
 
@@ -104,13 +139,16 @@ the number of task pairs remains small.
 │   ├── tasks.py          # addition/subtraction/multiplication/powers/squares task generators
 │   ├── compatibility.py  # P(T|s_i) definition + reuse/clone/scratch decision rule
 │   ├── strategies.py     # 3 training strategies: shared, independent scratch, clone-and-adapt
-│   ├── experiment.py     # runs all strategies across seeds (Phase 4 driver)
+│   ├── experiment.py     # runs all three strategies across seeds (Phase 4 driver)
 │   ├── analysis.py       # paired statistical tests (Phase 4 evaluation)
 │   ├── make_plots.py     # generates results/plot_*.png
 │   └── print_summary.py  # formats report + stats tables as markdown for the CI job summary
 ├── experiments/
-│   ├── stopping_rule_confound.py # fixed-budget confound follow-up
-│   └── squares_relatedness.py    # multiplication → squares relatedness follow-up
+│   ├── stopping_rule_confound.py      # fixed-budget confound follow-up
+│   ├── squares_relatedness.py         # multiplication → squares relatedness follow-up
+│   └── compatibility_calibration.py   # compatibility/reuse decision calibration
+├── tests/
+│   └── test_compatibility.py          # regression tests for false reuse
 └── results/
     ├── report.md          # full write-up
     ├── plot_*.png          # figures
@@ -123,11 +161,15 @@ the number of task pairs remains small.
 ```bash
 pip install -r requirements.txt
 python run_all.py
+python experiments/stopping_rule_confound.py
+python experiments/squares_relatedness.py
+python experiments/compatibility_calibration.py
+python -m unittest discover -s tests -v
 ```
 
-This regenerates every CSV, statistics table, and plot in `results/` (~15
-random seeds; runs in well under a minute on CPU, no GPU/deep-learning framework
-required — the whole thing is numpy).
+These commands regenerate the experiment CSVs, statistics, and calibration
+diagnostics. The project remains dependency-light: numpy/pandas on CPU, no GPU
+or deep-learning framework required.
 
 ## Status
 
