@@ -58,6 +58,7 @@ TASK_SEED_INDEX = {
     "multiplication": 2,
     "powers": 3,
     "squares": 4,
+    "division": 5,
 }
 
 # Fixed target, varying prior history.  The third column is only a compact
