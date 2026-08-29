@@ -32,6 +32,9 @@ jobs:
       - name: Run relatedness pairs experiment
         run: python experiments/relatedness_pairs.py
 
+      - name: Run retention / catastrophic-forgetting experiment
+        run: python experiments/retention.py
+
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
 
