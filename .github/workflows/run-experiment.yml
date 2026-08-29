@@ -23,6 +23,15 @@ jobs:
       - name: Run stopping-rule confound experiment
         run: python experiments/stopping_rule_confound.py
 
+      - name: Run squares relatedness experiment
+        run: python experiments/squares_relatedness.py
+
+      - name: Run compatibility calibration
+        run: python experiments/compatibility_calibration.py
+
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+
       - name: Print summary
         run: python src/print_summary.py >> "$GITHUB_STEP_SUMMARY"
 
