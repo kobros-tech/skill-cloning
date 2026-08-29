@@ -20,6 +20,7 @@ _RANGES = {
     "subtraction": ((0, 10), (0, 10)),
     "multiplication": ((0, 10), (0, 10)),
     "powers": ((0, 5), (0, 3)),  # base 0-4, exponent 0-2
+    "squares": ((0, 10), (0, 10)),
 }
 
 
@@ -32,6 +33,11 @@ def _op(task: str, a: np.ndarray, b: np.ndarray) -> np.ndarray:
         return a * b
     if task == "powers":
         return np.power(a.astype(float), b.astype(float))
+    if task == "squares":
+        # A deliberately simple intermediate task: square the first operand.
+        # It is structurally related to multiplication while leaving the second
+        # input available so all tasks share the same model interface.
+        return np.square(a.astype(float))
     raise ValueError(f"unknown task {task}")
 
 
