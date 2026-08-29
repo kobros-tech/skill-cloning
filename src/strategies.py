@@ -89,7 +89,7 @@ def run_scratch(seed: int) -> dict:
         nets[task] = net
         for t in TASK_ORDER:
             Xe, ye = sample_task(t, N_EVAL, seed=seed + 555)
-            m = net.mse(Xe, ye) if t == task else np.nan  # scratch net for `task` was never trained on `t`
+            m = net.mse(Xe, ye) if t == task else np.nan
             log.append({"trained_on": task, "evaluated_on": t, "mse": m, "curriculum_step": step})
     final = {}
     final_acc = {}
@@ -123,25 +123,22 @@ def run_proposed(seed: int) -> dict:
             parent_skill = skills[decision["parent"]]
             parent_skill.tasks_covered.append(task)
             skill_for_task[task] = parent_skill.name
-            convergence[task] = 0  # no training needed
+            convergence[task] = 0
         else:
             if decision["action"] == "clone":
                 parent_skill = skills[decision["parent"]]
                 new_net = parent_skill.net.clone()
                 new_net.reset_optimizer()
                 new_skill = Skill(task, new_net, origin="clone", parent=parent_skill.name)
-            else:  # scratch
+            else:
                 new_net = TinyMLP(hidden_dim=HIDDEN_DIM, seed=seed * 100 + step)
                 new_skill = Skill(task, new_net, origin="scratch", parent=None)
 
-            # trains only this skill's own (cloned or fresh) params; the parent
-            # object referenced by `skills[decision["parent"]]` is never touched (Section 5)
             _, steps = _train_track_accuracy(new_net, X, y, EPOCHS, LR, ACC_TARGET)
             convergence[task] = steps
             skills[task] = new_skill
             skill_for_task[task] = task
 
-        # snapshot: evaluate every skill currently in the system on every task seen so far
         for t in TASK_ORDER[: step + 1]:
             sk = skills[skill_for_task[t]]
             Xe, ye = sample_task(t, N_EVAL, seed=seed + 555)
@@ -162,7 +159,14 @@ def run_proposed(seed: int) -> dict:
         "final_mse": final,
         "final_acc": final_acc,
         "total_params": sum(s.net.num_params() for s in skills.values()),
-        "decisions": {t: {"action": d["action"], "parent": d["parent"], "score": d["score"]}
-                      for t, d in decisions.items()},
+        "decisions": {
+            t: {
+                "action": d["action"],
+                "parent": d["parent"],
+                "score": d["score"],
+                "solve_accuracy": d["solve_accuracy"],
+            }
+            for t, d in decisions.items()
+        },
         "skill_for_task": skill_for_task,
     }
