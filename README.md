@@ -37,6 +37,13 @@ uploaded as a downloadable `experiment-results` artifact on each run.
   `τ_solve=0.90` can classify a merely related but unsolved task as `reuse`.
   PR #2 therefore audits/calibrates this decision rule before broader task-pair
   experiments are added.
+- Broadening to four source→target pairs (PR #3) shows the transfer effect is
+  real but **not simply monotonic in the frozen-parent compatibility score**:
+  multiplication→powers (score 0.91) gets the largest speedup (2.3×), but
+  multiplication→squares gets a real, significant speedup (1.26×) despite a
+  near-zero frozen score (0.001), while addition→subtraction shows significant
+  *negative* transfer (0.33×, i.e. 3× slower than scratch) despite a comparable
+  score (0.16) to squares. See "Relatedness pairs" below.
 
 ## Stopping-rule confound follow-up
 
@@ -127,6 +134,68 @@ python experiments/compatibility_calibration.py
 Regression tests cover the key failure mode: a high compatibility score with
 insufficient target accuracy must not trigger zero-training reuse.
 
+## Relatedness pairs (PR #3)
+
+**Scientific question:** does the transfer benefit depend systematically on
+the relationship between source and target tasks, rather than being an
+isolated property of one task pair?
+
+`experiments/relatedness_pairs.py` extends the clone-vs-scratch convergence
+comparison (same model, optimizer, 85%-training-accuracy stopping rule, and
+seed protocol as `squares_relatedness.py` / `stopping_rule_confound.py`) to a
+small, deliberately chosen set of source → target pairs spanning a range of
+relatedness levels, rather than adding many arbitrary tasks:
+
+| pair | intended relatedness | mean frozen-parent score | mean paired speedup (scratch/clone) | paired t-test p |
+|---|---|---|---|---|
+| multiplication → squares | strong (squares is `a²`, a special case of multiplication) | 0.001 | **1.26×** | 3.9×10⁻⁹ |
+| multiplication → powers | moderate (powers generalizes repeated multiplication) | 0.915 | **2.31×** | 6.0×10⁻¹¹ |
+| addition → subtraction | weak (same input structure, different operation) | 0.156 | **0.33×** (i.e. 3× *slower*) | 2.3×10⁻¹² |
+| addition → multiplication | null / unrelated control | 0.005 | 1.12× | 0.013 |
+
+(15 seeds per pair; full per-seed data in `results/relatedness_pairs.csv`.)
+
+**This does not support a simple "higher score → bigger speedup" law**, and the
+README says so explicitly rather than overclaiming: multiplication→squares gets
+a large, significant speedup despite a compatibility score near zero, while
+addition→subtraction is significantly *slower* than scratch despite a
+comparable score to squares. A plausible reading — offered as an interpretive
+hypothesis, not a settled finding — is that the frozen `compatibility_score`
+measures whether the parent's *output* already matches the target task, which
+is a different thing from whether the parent's *internal representation* is a
+useful gradient-descent starting point for it. Multiplication and squares
+compute genuinely overlapping functions (squares is multiplication restricted
+to `a=b`), which could make multiplication's learned features transfer well
+under fine-tuning even though the frozen output is wrong almost everywhere off
+that diagonal. Addition and subtraction are different functions of the same
+inputs, which could make addition's learned features actively unhelpful to
+unlearn. The null control (addition→multiplication) shows a small but
+statistically significant *positive* speedup (1.12×), suggesting part of any
+"related" pair's advantage may simply be "any already-trained network beats a
+fresh random one," separate from task-specific relatedness — a caveat worth
+carrying into PR #4's statistical analysis.
+
+Outputs:
+
+- `results/relatedness_pairs.csv` — per-seed, per-pair convergence results and
+  frozen-parent relatedness scores.
+- `results/relatedness_pairs_summary.csv` — aggregate convergence, paired
+  speedup statistics, and paired t-tests per pair.
+- `results/plot_relatedness_vs_speedup.png` — relatedness score vs. mean
+  paired speedup, one point per pair.
+
+Run it with:
+
+```bash
+python experiments/relatedness_pairs.py
+```
+
+Structural regression tests (`tests/test_relatedness_pairs.py`) check that
+every pair returns one result per seed within the declared epoch budget and
+that the summary preserves the deliberate pair ordering — they do not assert
+the empirical direction of any pair's speedup, since that is a research
+finding rather than an implementation invariant.
+
 ## Repo structure
 
 ```
@@ -146,9 +215,11 @@ insufficient target accuracy must not trigger zero-training reuse.
 ├── experiments/
 │   ├── stopping_rule_confound.py      # fixed-budget confound follow-up
 │   ├── squares_relatedness.py         # multiplication → squares relatedness follow-up
-│   └── compatibility_calibration.py   # compatibility/reuse decision calibration
+│   ├── compatibility_calibration.py   # compatibility/reuse decision calibration
+│   └── relatedness_pairs.py           # PR #3: relatedness across 4 source→target pairs
 ├── tests/
-│   └── test_compatibility.py          # regression tests for false reuse
+│   ├── test_compatibility.py          # regression tests for false reuse
+│   └── test_relatedness_pairs.py      # structural regression tests for relatedness pairs
 └── results/
     ├── report.md          # full write-up
     ├── plot_*.png          # figures
@@ -164,6 +235,7 @@ python run_all.py
 python experiments/stopping_rule_confound.py
 python experiments/squares_relatedness.py
 python experiments/compatibility_calibration.py
+python experiments/relatedness_pairs.py
 python -m unittest discover -s tests -v
 ```
 

@@ -55,6 +55,10 @@ def main():
     parts.append(render_table("final_acc_summary.csv", "Final accuracy summary"))
     parts.append(render_table("convergence_summary.csv", "Convergence steps summary"))
     parts.append(render_table("params_summary.csv", "Parameter growth summary"))
+    parts.append(render_table("compatibility_calibration_summary.csv",
+                               "Compatibility decision-rule calibration (tau_solve audit)"))
+    parts.append(render_table("relatedness_pairs_summary.csv",
+                               "Relatedness pairs: clone vs. scratch convergence across source->target pairs"))
 
     print("\n".join(p for p in parts if p))
 

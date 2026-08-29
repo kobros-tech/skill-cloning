@@ -34,7 +34,7 @@ seed,strategy,task,convergence_steps
 2,clone_and_adapt,addition,308
 2,clone_and_adapt,subtraction,41
 2,clone_and_adapt,multiplication,1134
-2,clone_and_adapt,powers,0
+2,clone_and_adapt,powers,181
 3,shared_sequential,addition,296
 3,shared_sequential,subtraction,136
 3,shared_sequential,multiplication,1123
@@ -46,7 +46,7 @@ seed,strategy,task,convergence_steps
 3,clone_and_adapt,addition,273
 3,clone_and_adapt,subtraction,104
 3,clone_and_adapt,multiplication,1500
-3,clone_and_adapt,powers,0
+3,clone_and_adapt,powers,164
 4,shared_sequential,addition,342
 4,shared_sequential,subtraction,69
 4,shared_sequential,multiplication,1114
@@ -58,7 +58,7 @@ seed,strategy,task,convergence_steps
 4,clone_and_adapt,addition,290
 4,clone_and_adapt,subtraction,97
 4,clone_and_adapt,multiplication,1131
-4,clone_and_adapt,powers,0
+4,clone_and_adapt,powers,197
 5,shared_sequential,addition,297
 5,shared_sequential,subtraction,93
 5,shared_sequential,multiplication,1208
@@ -70,7 +70,7 @@ seed,strategy,task,convergence_steps
 5,clone_and_adapt,addition,318
 5,clone_and_adapt,subtraction,22
 5,clone_and_adapt,multiplication,1302
-5,clone_and_adapt,powers,0
+5,clone_and_adapt,powers,266
 6,shared_sequential,addition,230
 6,shared_sequential,subtraction,85
 6,shared_sequential,multiplication,1040
@@ -82,7 +82,7 @@ seed,strategy,task,convergence_steps
 6,clone_and_adapt,addition,281
 6,clone_and_adapt,subtraction,38
 6,clone_and_adapt,multiplication,1203
-6,clone_and_adapt,powers,0
+6,clone_and_adapt,powers,218
 7,shared_sequential,addition,280
 7,shared_sequential,subtraction,77
 7,shared_sequential,multiplication,943
@@ -94,7 +94,7 @@ seed,strategy,task,convergence_steps
 7,clone_and_adapt,addition,299
 7,clone_and_adapt,subtraction,86
 7,clone_and_adapt,multiplication,1077
-7,clone_and_adapt,powers,0
+7,clone_and_adapt,powers,175
 8,shared_sequential,addition,286
 8,shared_sequential,subtraction,75
 8,shared_sequential,multiplication,869
@@ -118,7 +118,7 @@ seed,strategy,task,convergence_steps
 9,clone_and_adapt,addition,345
 9,clone_and_adapt,subtraction,43
 9,clone_and_adapt,multiplication,1293
-9,clone_and_adapt,powers,0
+9,clone_and_adapt,powers,171
 10,shared_sequential,addition,245
 10,shared_sequential,subtraction,61
 10,shared_sequential,multiplication,1038
@@ -154,7 +154,7 @@ seed,strategy,task,convergence_steps
 12,clone_and_adapt,addition,302
 12,clone_and_adapt,subtraction,90
 12,clone_and_adapt,multiplication,1333
-12,clone_and_adapt,powers,0
+12,clone_and_adapt,powers,236
 13,shared_sequential,addition,280
 13,shared_sequential,subtraction,72
 13,shared_sequential,multiplication,1139
@@ -178,4 +178,4 @@ seed,strategy,task,convergence_steps
 14,clone_and_adapt,addition,279
 14,clone_and_adapt,subtraction,26
 14,clone_and_adapt,multiplication,968
-14,clone_and_adapt,powers,0
+14,clone_and_adapt,powers,180

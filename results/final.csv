@@ -34,7 +34,7 @@ seed,strategy,task,final_mse,final_acc
 2,clone_and_adapt,addition,0.15520707547107818,0.8533333333333334
 2,clone_and_adapt,subtraction,0.1198415482671702,0.91
 2,clone_and_adapt,multiplication,0.251688462465731,0.8066666666666666
-2,clone_and_adapt,powers,5.525219522678861,0.3566666666666667
+2,clone_and_adapt,powers,0.261198469957779,0.8466666666666667
 3,shared_sequential,addition,1280.7607163642945,0.02
 3,shared_sequential,subtraction,2120.5729255302936,0.01
 3,shared_sequential,multiplication,536.0861353471503,0.06
@@ -46,7 +46,7 @@ seed,strategy,task,final_mse,final_acc
 3,clone_and_adapt,addition,0.13831826556557744,0.8766666666666667
 3,clone_and_adapt,subtraction,0.17719122556101116,0.8733333333333333
 3,clone_and_adapt,multiplication,0.18507893146926852,0.84
-3,clone_and_adapt,powers,7.0916924788265945,0.2966666666666667
+3,clone_and_adapt,powers,0.23520032705189958,0.8266666666666667
 4,shared_sequential,addition,1233.128622501367,0.02666666666666667
 4,shared_sequential,subtraction,2082.6620596503685,0.01
 4,shared_sequential,multiplication,422.5342512359201,0.08666666666666667
@@ -58,7 +58,7 @@ seed,strategy,task,final_mse,final_acc
 4,clone_and_adapt,addition,0.14306191420475944,0.82
 4,clone_and_adapt,subtraction,0.12516892585124909,0.8866666666666667
 4,clone_and_adapt,multiplication,0.34090753772101,0.78
-4,clone_and_adapt,powers,8.410331851600187,0.3333333333333333
+4,clone_and_adapt,powers,0.2232391063207992,0.8233333333333334
 5,shared_sequential,addition,995.22378008538,0.04
 5,shared_sequential,subtraction,1756.9172945538494,0.01
 5,shared_sequential,multiplication,376.92081956580273,0.08666666666666667
@@ -70,7 +70,7 @@ seed,strategy,task,final_mse,final_acc
 5,clone_and_adapt,addition,0.14034330835289177,0.8266666666666667
 5,clone_and_adapt,subtraction,0.1125009935784842,0.88
 5,clone_and_adapt,multiplication,0.190399434708709,0.8433333333333334
-5,clone_and_adapt,powers,5.676646376072993,0.34
+5,clone_and_adapt,powers,0.1262688806313909,0.87
 6,shared_sequential,addition,1437.539788589408,0.03666666666666667
 6,shared_sequential,subtraction,2291.0813240574007,0.0033333333333333335
 6,shared_sequential,multiplication,627.6063965564904,0.08
@@ -82,7 +82,7 @@ seed,strategy,task,final_mse,final_acc
 6,clone_and_adapt,addition,0.16393032488713322,0.8033333333333333
 6,clone_and_adapt,subtraction,0.12703948961698627,0.8366666666666667
 6,clone_and_adapt,multiplication,0.23730640508460596,0.8066666666666666
-6,clone_and_adapt,powers,6.782558323424582,0.4
+6,clone_and_adapt,powers,0.1737964768048997,0.8633333333333333
 7,shared_sequential,addition,1082.6700088938524,0.03666666666666667
 7,shared_sequential,subtraction,1832.5957805845599,0.006666666666666667
 7,shared_sequential,multiplication,458.8189029142889,0.056666666666666664
@@ -94,7 +94,7 @@ seed,strategy,task,final_mse,final_acc
 7,clone_and_adapt,addition,0.18143235911130412,0.83
 7,clone_and_adapt,subtraction,0.18327480304828994,0.8433333333333334
 7,clone_and_adapt,multiplication,0.49083934486882724,0.8
-7,clone_and_adapt,powers,5.3625231069817145,0.34
+7,clone_and_adapt,powers,0.19452030310414678,0.8866666666666667
 8,shared_sequential,addition,1083.4120416537207,0.016666666666666666
 8,shared_sequential,subtraction,1843.5768042925959,0.006666666666666667
 8,shared_sequential,multiplication,413.7231723822626,0.11333333333333333
@@ -118,7 +118,7 @@ seed,strategy,task,final_mse,final_acc
 9,clone_and_adapt,addition,0.12309770412319504,0.8833333333333333
 9,clone_and_adapt,subtraction,0.1276165818406956,0.8366666666666667
 9,clone_and_adapt,multiplication,0.2120975938077367,0.8766666666666667
-9,clone_and_adapt,powers,5.288355973942938,0.41
+9,clone_and_adapt,powers,0.3599354378479574,0.86
 10,shared_sequential,addition,1124.859337232818,0.02666666666666667
 10,shared_sequential,subtraction,1914.309772380594,0.01
 10,shared_sequential,multiplication,444.1707796609884,0.056666666666666664
@@ -154,7 +154,7 @@ seed,strategy,task,final_mse,final_acc
 12,clone_and_adapt,addition,0.19241251836246698,0.7733333333333333
 12,clone_and_adapt,subtraction,0.09465528450031421,0.9133333333333333
 12,clone_and_adapt,multiplication,1.1260944411894744,0.85
-12,clone_and_adapt,powers,5.454056832552707,0.32
+12,clone_and_adapt,powers,0.18402174143844174,0.8433333333333334
 13,shared_sequential,addition,1059.4303361839823,0.05
 13,shared_sequential,subtraction,1809.7866504084411,0.016666666666666666
 13,shared_sequential,multiplication,361.3177651701273,0.07666666666666666
@@ -178,4 +178,4 @@ seed,strategy,task,final_mse,final_acc
 14,clone_and_adapt,addition,0.12210357337489791,0.8666666666666667
 14,clone_and_adapt,subtraction,0.12177907604358641,0.8433333333333334
 14,clone_and_adapt,multiplication,0.4606034652187798,0.7533333333333333
-14,clone_and_adapt,powers,4.982434131125774,0.25333333333333335
+14,clone_and_adapt,powers,0.24061530384149676,0.8133333333333334
