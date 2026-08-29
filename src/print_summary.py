@@ -3,8 +3,6 @@ print_summary.py — formats results/ into GitHub-flavored markdown and prints
 to stdout. Intended usage in CI:
 
     python src/print_summary.py >> "$GITHUB_STEP_SUMMARY"
-
-which makes the report and statistics tables visible on the workflow summary.
 """
 import os
 import re
@@ -59,6 +57,10 @@ def main():
     parts.append(render_table(
         "relatedness_pairs_summary.csv",
         "Prerequisite acquisition: fixed target, varying prior-skill history",
+    ))
+    parts.append(render_table(
+        "retention_summary.csv",
+        "Skill retention: pre/post accuracy after new-skill acquisition",
     ))
 
     print("\n".join(p for p in parts if p))
