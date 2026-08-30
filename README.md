@@ -11,8 +11,10 @@ The current research plan is tracked in [Issue #3](https://github.com/kobros-tec
 - The expanded fixed-target matrix confirms heterogeneous transfer: powers benefit from additional prior history (471.6 → 355.2 → 237.3 **mean budgeted target-adaptation steps**), while division shows negative transfer (515.2 → 616.2 → 617.5) and squares remains difficult (20.0% → 20.0% → 13.3% success).
 - A corrected reuse gate requires both compatibility evidence and independent target-solve accuracy, preventing a merely related but unsolved skill from being treated as a zero-training solution.
 - A prerequisite history is considered available only when every requested prerequisite is successfully acquired. Failed prerequisites are recorded but are never exposed to the controller as acquired skills.
+- The retention checks re-evaluate previously acquired skills after later acquisitions on stable skill-specific evaluation sets.
+- The reported zero-change retention checks are consistent with the isolated-skill invariant: stored parent skills are not modified during later skill acquisition.
+- These retention checks are deliberately treated as an implementation/mechanism verification, not as statistical evidence that the system is robust to catastrophic forgetting. A genuine interference experiment would require an at-risk comparison arm in which later learning can modify previously learned parameters.
 - **Signed-domain follow-up:** expanding the operand domain from non-negative (`{0,...,9}`) to signed (`{-9,...,9}`) integers provides a controlled domain-sensitivity test under matched seeds and an otherwise identical protocol. The current branch reports that multiplication → powers reverses direction, multiplication → squares moves toward no effect, and addition → subtraction's negative transfer is reduced, while the addition → multiplication negative control shows no statistically detectable domain change. These results should be treated as domain-sensitive observations for this controlled task family, not universal claims.
-- A skill-isolation invariant check confirms the implementation never modifies a previously acquired skill's stored parameters: every recorded accuracy change is exactly 0.0, for every seed and sequence. This is a **code-correctness/regression property confirmed to hold**, not a statistical retention experiment.
 
 ## Final paper
 
@@ -59,30 +61,3 @@ Run it with:
 ```bash
 python experiments/retention.py
 python -m unittest discover -s tests -v
-```
-
-## Signed-domain transfer-robustness experiment
-
-`experiments/signed_domain_transfer.py` reruns the four load-bearing relatedness pairs and the fixed-target prerequisite-history matrix under two domains -- the existing non-negative domain (`{0,...,9}`-scale ranges, `tasks.py`'s default) and a new signed domain (`{-9,...,9}`-scale ranges; powers' exponent stays non-negative to avoid confounding sign with fractional targets; division's divisor is nonzero by construction in both domains). Every comparison is paired by seed. Only the operand domain changes -- architecture, optimizer, learning rate, stopping criterion, training budget, seed protocol, and compatibility/controller logic are held fixed.
-
-**Headline result: transfer is not uniformly robust to this domain expansion.** The branch's current analysis reports that multiplication → powers reverses direction (2.17× → 0.72×), multiplication → squares erodes toward no effect (1.23× → 1.01×), and addition → subtraction's negative transfer neutralizes (0.41× → 1.00×). The addition → multiplication negative control remains stable (1.15× → 1.18×; p=0.59). Squares' already-low acquisition success rate collapses to 0% in the signed domain. These claims require confirmation against regenerated results after this branch is reconciled with current `main`.
-
-The finding should be read narrowly: it establishes that transfer can be domain-sensitive for this system on this specific expansion, not that it always is, nor that "negative numbers" are the cause independent of the accompanying distribution shift (expanding `{0,...,9}` to `{-9,...,9}` changes more than sign -- see the limitations note in `docs/final_paper.md`).
-
-Outputs:
-
-- `results/signed_domain_pairs.csv`, `results/signed_domain_pairs_summary.csv`, `results/signed_domain_pairs_comparison.csv` — per-seed and summary results for the four relatedness pairs, both domains.
-- `results/signed_domain_history.csv`, `results/signed_domain_history_summary.csv` — the prerequisite-history matrix, both domains.
-- `results/signed_domain_sign_breakdown.csv` — sign-specific diagnostic breakdown for multiplication→powers, multiplication→squares, and addition→subtraction.
-- `results/plot_signed_domain_speedup.png`, `results/plot_signed_domain_success_rate.png`, `results/plot_signed_domain_compatibility_vs_speedup.png`, `results/plot_signed_domain_convergence.png`.
-
-Run it with:
-
-```bash
-python experiments/signed_domain_transfer.py
-python -m unittest discover -s tests -v
-```
-
-## Reproducibility and scope
-
-The project remains intentionally small and dependency-light. Results are conditional on the tested task family, architecture, optimizer, controller, thresholds, seed count, and sequence length. They should be interpreted as evidence for the proposed mechanism in this controlled setting rather than as a universal claim about continual learning.

@@ -8,21 +8,28 @@ The prerequisite-acquisition follow-up also uses division and squares as target
 experiments without changing TASK_ORDER, so the historical Phase 4 curriculum
 results remain reproducible.
 
-Domain configuration (signed-domain follow-up):
+Domain configuration:
   sample_task() takes an explicit `domain` argument, defaulting to
-  "nonnegative". That default preserves the original random-number generator
-  call sequence and therefore the existing non-negative experiments.
+  "nonnegative". The default preserves the original data distribution and
+  keeps existing callers backward compatible.
+
+For the signed-domain follow-up:
+  - addition, subtraction, multiplication, and squares use signed operands
+  - powers use signed bases but non-negative exponents in both domains
+  - division uses signed numerators and nonzero signed divisors
 
 Design choices:
   - operands are drawn from small integer ranges so a tiny MLP can fit them
   - inputs are scaled by /10 to keep the tanh layer out of saturation
   - targets are left in natural units since the output layer is linear
   - powers uses small base/exponent values; the exponent stays non-negative
-    in both domains so the signed comparison changes operand sign without
-    introducing fractional targets
+    in both domains so the signed comparison changes base sign without
+    introducing negative or fractional exponents
 """
 from __future__ import annotations
+
 import numpy as np
+
 
 TASK_ORDER = ["addition", "subtraction", "multiplication", "powers"]
 
@@ -40,18 +47,33 @@ DOMAIN_RANGES = {
         "addition": ((-9, 10), (-9, 10)),
         "subtraction": ((-9, 10), (-9, 10)),
         "multiplication": ((-9, 10), (-9, 10)),
+        # Only the base becomes signed. Exponents remain non-negative.
         "powers": ((-4, 5), (0, 3)),
         "squares": ((-9, 10), (-9, 10)),
     },
 }
 
 DIVISION_RANGES = {
-    "nonnegative": {"numerator": (0, 25), "divisor": (1, 6)},
-    "signed": {"numerator": (-24, 25), "divisor_magnitude": (1, 6)},
+    "nonnegative": {
+        "numerator": (0, 25),
+        "divisor": (1, 6),
+    },
+    "signed": {
+        "numerator": (-24, 25),
+        "divisor_magnitude": (1, 6),
+    },
 }
 
-# Kept for compatibility with any existing code importing the historical name.
-_RANGES = {**DOMAIN_RANGES["nonnegative"], "division": ((0, 25), (1, 6))}
+# Backward-compatible alias for existing code that imports the historical
+# non-negative range table. The structure matches the original _RANGES
+# representation, including division's (numerator_range, divisor_range).
+_RANGES = {
+    **DOMAIN_RANGES["nonnegative"],
+    "division": (
+        DIVISION_RANGES["nonnegative"]["numerator"],
+        DIVISION_RANGES["nonnegative"]["divisor"],
+    ),
+}
 
 
 def _op(task: str, a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -66,6 +88,8 @@ def _op(task: str, a: np.ndarray, b: np.ndarray) -> np.ndarray:
     if task == "squares":
         return np.square(a.astype(float))
     if task == "division":
+        # Divisor is guaranteed nonzero by DIVISION_RANGES. Fractional outputs
+        # are intentional: division is a distinct arithmetic regression target.
         return a.astype(float) / b.astype(float)
     raise ValueError(f"unknown task {task}")
 
@@ -86,22 +110,29 @@ def sample_task(
         if domain == "nonnegative":
             a_lo, a_hi = DIVISION_RANGES["nonnegative"]["numerator"]
             b_lo, b_hi = DIVISION_RANGES["nonnegative"]["divisor"]
+
             a = rng.integers(a_lo, a_hi, size=n)
             b = rng.integers(b_lo, b_hi, size=n)
+
         else:
             a_lo, a_hi = DIVISION_RANGES["signed"]["numerator"]
             m_lo, m_hi = DIVISION_RANGES["signed"]["divisor_magnitude"]
+
             a = rng.integers(a_lo, a_hi, size=n)
             magnitude = rng.integers(m_lo, m_hi, size=n)
             sign = rng.choice(np.array([-1, 1]), size=n)
             b = magnitude * sign
+
         y = _op(task, a, b).astype(float)
         X = np.stack([a, b], axis=1).astype(float) / 10.0
         return X, y
 
     (a_lo, a_hi), (b_lo, b_hi) = DOMAIN_RANGES[domain][task]
+
     a = rng.integers(a_lo, a_hi, size=n)
     b = rng.integers(b_lo, b_hi, size=n)
+
     y = _op(task, a, b).astype(float)
     X = np.stack([a, b], axis=1).astype(float) / 10.0
+
     return X, y

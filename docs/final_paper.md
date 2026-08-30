@@ -2,22 +2,22 @@
 
 ## Abstract
 
-Continual acquisition systems must learn new skills without unnecessarily discarding useful prior knowledge. This study evaluates a small, reproducible skill-acquisition framework in which an incoming task is handled by one of three routes: reuse an existing skill when it already solves the target, clone a related skill and adapt it when reuse is insufficient, or learn from a fresh initialization when prior knowledge is not useful. The experiments use small arithmetic regression tasks and matched random seeds to separate acquisition reliability, acquisition efficiency, and retention.
+Continual acquisition systems must learn new skills without unnecessarily discarding useful prior knowledge. This study evaluates a small, reproducible skill-acquisition framework in which an incoming task is handled by one of three routes: reuse an existing skill when it already solves the target, clone a related skill and adapt it when reuse is insufficient, or learn from a fresh initialization when prior knowledge is not useful. The experiments use small arithmetic regression tasks and matched random seeds to separate acquisition reliability, acquisition efficiency, transfer, and the preservation of previously acquired skills.
 
-The central result is that prior knowledge is not uniformly beneficial: the observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both substantial positive transfer and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. A signed-domain follow-up further shows this transfer behavior is itself distribution-sensitive: expanding the operand domain from non-negative to signed integers reversed the direction of the strongest transfer result (multiplication → powers, 2.17× → 0.72×) and eroded another toward no effect (multiplication → squares, 1.23× → 1.01×), while a null-control pair stayed stable, indicating the reversal is not simply an artifact of the manipulation itself. A separate check confirmed that the implementation's skill-isolation guarantee holds: a previously acquired skill's stored parameters are never modified by later acquisitions, so its accuracy on a fixed evaluation set is unchanged before and after. This is an implementation invariant of the current architecture, not a statistical finding about resistance to catastrophic forgetting -- there is no mechanism in this experiment through which a frozen skill's parameters could change, so the check could not have come out any other way. A genuine empirical test of forgetting would require a baseline in which interference is actually possible (e.g. a shared-parameter architecture); this paper reports the isolation-guarantee check on its own terms rather than as evidence against catastrophic forgetting in general.
+The central result is that prior knowledge is not uniformly beneficial: observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both positive and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. A signed-domain follow-up further shows that transfer behavior can be distribution-sensitive: expanding the operand domain from non-negative to signed integers reversed the direction of the strongest transfer result (multiplication → powers, 2.17× → 0.72×) and eroded another toward no effect (multiplication → squares, 1.23× → 1.01×), while a null-control pair remained statistically stable. A separate skill-isolation check confirmed that previously acquired skills' stored parameters are not modified by later acquisitions. This is an implementation invariant of the current architecture, not a statistical finding about resistance to catastrophic forgetting.
 
 ## 1. Introduction
 
 A continual-learning system should be able to acquire a new capability while preserving capabilities that it has already learned. A simple shared-network strategy can update parameters for every new task, making the system vulnerable to interference. An alternative is to treat each learned capability as an independently stored skill and decide, for each incoming task, whether an existing skill should be reused, cloned and adapted, or whether learning should begin from scratch.
 
-This work studies that mechanism as a controlled research prototype. The goal is not to claim a universal theory of prerequisites or a universal advantage for cloning. Instead, the experiments ask when previously acquired skills help, when they do not, and whether adding a new skill damages previously acquired ones.
+This work studies that mechanism as a controlled research prototype. The goal is not to claim a universal theory of prerequisites or a universal advantage for cloning. Instead, the experiments ask when previously acquired skills help, when they do not, whether transfer depends on the task distribution, and whether the isolated-skill mechanism preserves earlier skills during subsequent acquisition.
 
 The research is organized around four questions:
 
 1. Can a new target skill be acquired reliably?
 2. Can an already-solved target be reused without additional training?
 3. When reuse is not possible, does cloning provide a useful initialization compared with scratch learning?
-4. Does acquiring a new skill cause measurable degradation of earlier skills?
+4. Does the isolated-skill mechanism preserve previously acquired skills during later acquisition?
 
 ## 2. Experimental system
 
@@ -25,101 +25,261 @@ The prototype uses a small two-input, one-output neural network with a 32-unit h
 
 The controller exposes three acquisition routes:
 
-- **Reuse:** retain an existing skill unchanged when both the compatibility gate and an independent solved-target accuracy check are satisfied.
-- **Clone + adapt:** deep-copy an existing skill and train the copy on the target task.
-- **Scratch:** create a fresh network and train it on the target task.
+* **Reuse:** retain an existing skill unchanged when both the compatibility gate and an independent solved-target accuracy check are satisfied.
+* **Clone + adapt:** deep-copy an existing skill and train the copy on the target task.
+* **Scratch:** create a fresh network and train it on the target task.
 
 The corrected reuse gate is important. A high frozen compatibility score alone is not sufficient evidence that the source skill already solves the target. The independent solve-accuracy check prevents a merely related skill from being incorrectly treated as a zero-training solution.
 
-### Data separation
+### 2.1 Mathematical formulation
+
+Let the incoming target task be \(T\) and let the repository contain previously acquired skills \(s_i\), each represented by a parameter vector \(\theta_i\). A skill maps an input \(x\) to an output through \(f(x;\theta_i)\).
+
+For a target probe set \(D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}\), the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
+
+$$
+\mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}
+\left(f(x_j;\theta_i)-y_j\right)^2
+$$
+
+$$
+P(T\mid s_i)=
+\exp\left(-\frac{\mathrm{MSE}(T,s_i)}{60}\right).
+$$
+
+The compatibility score is computed without updating \(\theta_i\). It therefore measures how well the frozen parent already matches the target, rather than how useful its internal representation will necessarily be after adaptation.
+
+Let \(A(T,s_i)\) denote the independent target-solve accuracy used by the corrected reuse gate. With thresholds \(\tau_{\mathrm{solve}}=0.90\) and \(\tau_{\mathrm{clone}}=0.15\), the controller selects an action according to:
+
+$$
+\mathrm{action}(T,s_i)=
+\begin{cases}
+\mathrm{reuse} &
+\text{if } P(T\mid s_i)\geq\tau_{\mathrm{solve}}
+\text{ and } A(T,s_i)\geq 0.85,\\
+\mathrm{clone} &
+\text{if } P(T\mid s_i)\geq\tau_{\mathrm{clone}}
+\text{ and the reuse condition is not satisfied},\\
+\mathrm{scratch} &
+\text{otherwise.}
+\end{cases}
+$$
+
+When clone-and-adapt is selected from parent \(s_i\), the target model is initialized from the parent's parameters:
+
+$$
+\theta_T^{(0)}=\theta_i.
+$$
+
+For scratch learning, \(\theta_T^{(0)}\) is independently initialized. The adapted parameters are then obtained by minimizing the target training loss, represented here by mean squared error:
+
+$$
+\theta_T^*=
+\arg\min_{\theta}\;
+\frac{1}{n}\sum_{j=1}^{n}
+\left(f(x_j;\theta)-y_j\right)^2.
+$$
+
+These equations define the mechanism evaluated in the experiments; they do not assume that a larger compatibility score must imply a larger transfer benefit.
+
+### 2.2 Acquisition metrics
+
+For a matched seed \(r\), let \(E_{\mathrm{scratch}}^{(r)}\) and \(E_{\mathrm{clone}}^{(r)}\) denote the numbers of epochs required to reach the predeclared training criterion. The per-seed convergence speedup is:
+
+$$
+S^{(r)}=
+\frac{E_{\mathrm{scratch}}^{(r)}}
+{E_{\mathrm{clone}}^{(r)}}.
+$$
+
+Thus \(S>1\) favors clone-and-adapt, while \(S<1\) indicates that cloning is slower than scratch. The reported paired comparisons treat the matched seed as the unit of analysis.
+
+Acquisition reliability is kept separate from efficiency. Let \(I_r=1\) when the target reaches the declared acquisition criterion within the allowed budget and \(I_r=0\) otherwise. The empirical success rate is:
+
+$$
+R=\frac{1}{N}\sum_{r=1}^{N} I_r.
+$$
+
+This separation is important for difficult targets such as squares, where a method may have a low success rate even if successful runs can be compared for convergence speed.
+
+### 2.3 Retention and isolation invariant
+
+For an acquired skill \(s_i\), let \(\theta_i^{\mathrm{pre}}\) and \(\theta_i^{\mathrm{post}}\) denote its stored parameters immediately before and after a later skill is acquired. The intended isolated-skill invariant is:
+
+$$
+\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}}.
+$$
+
+or equivalently,
+
+$$
+\Delta\theta_i=
+\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}=0.
+$$
+
+The retention check evaluates the same stored skill on the same stable retention set before and after later acquisition. Its diagnostic accuracy change is:
+
+$$
+\Delta A_i=
+A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
+$$
+
+The predeclared practical diagnostic criterion is:
+
+$$
+\Delta A_i\geq-0.05.
+$$
+
+Because the stored parent is not optimized after acquisition and the evaluation set is unchanged, \(\Delta A_i=0\) is expected under the mechanism. Therefore this quantity is reported as an implementation/invariance diagnostic, not as a statistical estimate of resistance to interference.
+
+### 2.4 Data separation
 
 The experiment separates target-training data, compatibility-probe data, solve/accuracy data, and held-out evaluation data. Held-out evaluation data are not used to choose thresholds, budgets, stopping rules, or model-selection decisions.
 
-### Seeds
+### 2.5 Seeds
 
-Experiments use matched deterministic seeds. The main relatedness and retention experiments use 15 seeds per condition. Pairing by seed allows within-seed comparisons between acquisition strategies and retention measurements.
+Experiments use matched deterministic seeds. The main relatedness, signed-domain, and retention experiments use 15 seeds per condition. Pairing by seed allows within-seed comparisons between acquisition strategies where applicable.
 
 ## 3. Research design
 
-### 3.1 Relatedness and prior-history experiments
+### 3.1 Historical relatedness analysis and fixed-target prerequisite matrix
 
-The initial source-target experiments examined multiplication → squares, multiplication → powers, addition → subtraction, and addition → multiplication. These results motivated a stronger fixed-target design: hold the target fixed and vary the prior-skill history.
+The initial source-target experiments examined multiplication → squares, multiplication → powers, addition → subtraction, and addition → multiplication. These results are retained as a **historical relatedness analysis** and are useful for showing that transfer can be heterogeneous.
 
-The planned prerequisite matrix includes each of subtraction, division, squares, and powers under three histories: no prior skill, addition only, and addition + multiplication. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
+The **expanded fixed-target prerequisite matrix is the authoritative current quantitative analysis**. It holds the target fixed and varies the prior-skill history across no prior skill, addition only, and addition + multiplication. The matrix includes subtraction, division, squares, and powers. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
 
-The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target.
+The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target under the stated protocol.
 
-### 3.2 Skill-isolation invariant check (not a statistical retention experiment)
+### 3.2 Skill-isolation invariant check
 
-A separate check evaluates sequential acquisition. After each new skill is acquired, every previously acquired skill is evaluated again on its own stable, skill-specific evaluation set. For each old skill we record pre-acquisition accuracy, post-acquisition accuracy, the absolute change between them, and whether the change stays within a predeclared five-percentage-point practical tolerance.
+A separate check evaluates sequential acquisition. After each new skill is acquired, every previously acquired skill is evaluated again on its own stable, skill-specific evaluation set.
 
-Unlike the transfer experiments in Section 3.1, this check does not have statistical uncertainty to report. In the current architecture, a `Skill`'s network is never modified once training on it stops -- there is no code path in this implementation through which a later acquisition's gradient updates could reach an already-stored skill. Because the pre- and post-acquisition evaluations use the identical frozen network on the identical deterministic evaluation batch (same seed, same data), the recorded change is mathematically guaranteed to be exactly zero; it could not have come out any other way given the code as written. Reporting a confidence interval, standard deviation, or effect size over that quantity would describe sampling uncertainty that does not exist, so this paper does not compute or report those statistics for this check.
+Unlike the transfer experiments, this check does not provide statistical evidence about resistance to interference. In the current architecture, a `Skill`'s network is never modified once training on it stops. There is no code path through which a later acquisition's gradient updates can reach an already-stored skill.
 
-What the check legitimately establishes is narrower and still useful: that the isolation guarantee actually holds in the implementation, i.e. there is no bug that lets a later acquisition leak into a supposedly frozen skill. That is a real regression check on the code, not an empirical finding about continual learning in general. A genuine empirical test of forgetting would require an architecture in which interference is actually possible -- for example, re-running the original shared-parameter baseline (Section 4.1's precursor, described in the historical results) across this same sequential-acquisition protocol, so that a nonzero result is a possible outcome the check could detect. That comparison is left for future work rather than attempted here, to keep this PR's scope to the reframing itself.
+Because the pre- and post-acquisition evaluations use the identical frozen network on the identical deterministic evaluation batch, the recorded change is mathematically expected to be exactly zero. Consequently, a confidence interval, standard deviation, or effect size over this quantity would not represent meaningful sampling uncertainty.
+
+What the check legitimately establishes is narrower: the isolation guarantee holds in the implementation, with no observed code path allowing later acquisition to modify a supposedly frozen skill. This is a useful regression property, but it is not evidence that catastrophic forgetting is absent in continual-learning systems generally.
+
+A genuine empirical forgetting experiment would require an at-risk comparison arm in which later learning can modify parameters supporting earlier skills, such as a shared-network baseline.
 
 ## 4. Results
 
-### 4.1 Transfer is relationship-dependent
+### 4.1 Historical relatedness-pair results
 
-The earlier relatedness-pair experiment produced heterogeneous transfer. Multiplication → powers showed a mean paired speedup of approximately 2.31×, while multiplication → squares showed approximately 1.26×. Addition → subtraction instead produced approximately 0.33×, meaning clone-and-adapt was slower than scratch. Addition → multiplication was approximately 1.12×.
+The earlier relatedness-pair experiment produced heterogeneous transfer. Multiplication → powers showed a mean paired speedup of approximately 2.31×, multiplication → squares approximately 1.26×, addition → subtraction approximately 0.33×, and addition → multiplication approximately 1.12×.
 
-These observations do not support a simple monotonic rule in which a larger frozen compatibility score always predicts a larger transfer benefit. In particular, a frozen output-compatibility measure and usefulness as a parameter initialization are not necessarily the same property.
+These observations are explicitly **historical relatedness results**. They are not mixed with the newer fixed-target matrix and should not be interpreted as the current controller's final quantitative summary.
 
-### 4.4 Domain-sensitivity analysis (signed-domain follow-up)
+They also do not support a simple monotonic rule in which a larger frozen compatibility score always predicts a larger transfer benefit. A frozen output-compatibility measure and usefulness as a parameter initialization are not necessarily the same property.
 
-**Research question:** does the transfer behavior in Section 4.1 hold up when the arithmetic operand domain is expanded from non-negative integers to include negative values, or is it sensitive to the specific input distribution the original experiments used?
+### 4.2 Authoritative fixed-target prerequisite matrix
 
-This follow-up reruns the four pairs from Section 4.1 under matched seeds in two domains -- the original non-negative domain (`{0,...,9}` for most tasks) and a signed domain (`{-9,...,9}`, with the powers exponent deliberately kept non-negative to avoid confounding operand sign with a change to fractional targets, and division's divisor drawn to be nonzero in both domains). Only the operand domain changes; architecture, optimizer, learning rate, stopping criterion, training budget, seed protocol, and compatibility calculation are identical to Section 4.1's setup. This experiment's own re-run of the non-negative domain (2.17×, 1.23×, 0.41×, 1.15× for the four pairs respectively) replicates Section 4.1's numbers (2.31×, 1.26×, 0.33×, 1.12×) closely under an independently constructed seed scheme -- not identically, since the two experiments draw data differently, but in the same direction and comparable magnitude for every pair, which is itself a useful cross-check.
+The current fixed-target experiment provides the main quantitative evidence for how additional prior history affects acquisition.
+
+| Target      | No prior skill | Addition only | Addition + Multiplication |
+| ----------- | -------------: | ------------: | ------------------------: |
+| Subtraction |    33.5 epochs |   62.3 epochs |               73.2 epochs |
+| Division    |   515.2 epochs |  616.2 epochs |              617.5 epochs |
+| Squares     |  20.0% success | 20.0% success |             13.3% success |
+| Powers      |   471.6 epochs |  355.2 epochs |              237.3 epochs |
+
+For subtraction, division, and powers, the values are acquisition epochs to the declared criterion. Squares is reported as success rate because many runs do not reach the acquisition criterion within the allowed budget.
+
+The matrix shows heterogeneous transfer rather than a universal benefit from additional prior knowledge. Powers improves substantially as prior history expands, while division becomes slower and squares remains difficult. These results support the conclusion that transfer depends on the source-target relationship and that additional prior skills can introduce negative transfer.
+
+These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
+
+### 4.3 Skill-isolation invariant check
+
+The retention run reports zero change in the repeated pre/post checks and a 100% pass rate under the five-percentage-point practical tolerance. These values are consistent with the implementation invariant that previously acquired skills are stored independently and are not modified while a new skill is adapted.
+
+Because the same unchanged skill is evaluated on the same skill-specific retention set before and after later acquisitions, the resulting zero change is **not an independent empirical estimate of protection against catastrophic forgetting**. It is a verification that the isolation mechanism and evaluation protocol behave as intended.
+
+The correct interpretation is therefore narrow: **the implementation's skill-isolation guarantee holds**. This is a useful regression property because it rules out a class of implementation bugs in which later training accidentally modifies a supposedly frozen skill.
+
+### 4.4 Domain-sensitivity analysis: signed-domain follow-up
+
+**Research question:** does the transfer behavior observed in Section 4.1 hold when the arithmetic operand domain is expanded from non-negative integers to include negative values, or is it sensitive to the specific input distribution used by the original experiments?
+
+This follow-up reruns the four relatedness pairs from Section 4.1 under matched seeds in two domains: the original non-negative domain (`{0,...,9}` for most tasks) and a signed domain (`{-9,...,9}`). The powers exponent remains non-negative to avoid confounding operand sign with fractional targets, and division's divisor is nonzero by construction in both domains.
+
+Only the operand domain changes. Architecture, optimizer, learning rate, stopping criterion, training budget, seed protocol, compatibility calculation, and data-role separation are otherwise held fixed.
+
+The experiment's non-negative-domain rerun gives 2.17×, 1.23×, 0.41×, and 1.15× for the four pairs, respectively. These values are close in direction and magnitude to the historical results in Section 4.1, although they are not byte-identical because the follow-up uses an independently constructed seed/data-generation scheme.
 
 **Result: transfer is not uniformly robust to this domain expansion.**
 
-| Pair | Non-negative speedup | Signed speedup | Paired t-test p | Direction reversed? |
-|---|---|---|---|---|
-| multiplication → powers | 2.17× | 0.72× | 5.6×10⁻⁸ | **Yes** |
-| multiplication → squares | 1.23× | 1.01× | 7.0×10⁻⁵ | No (erodes toward null) |
-| addition → subtraction | 0.41× | 1.00× | 1.9×10⁻⁷ | Yes (negative transfer neutralizes) |
-| addition → multiplication (null control) | 1.15× | 1.18× | 0.59 (n.s.) | No |
+| Pair                                     | Non-negative speedup | Signed speedup | Paired t-test p | Direction reversed?                |
+| ---------------------------------------- | -------------------: | -------------: | --------------: | ---------------------------------- |
+| multiplication → powers                  |                2.17× |          0.72× |        5.6×10⁻⁸ | **Yes**                            |
+| multiplication → squares                 |                1.23× |          1.01× |        7.0×10⁻⁵ | No; erodes toward null             |
+| addition → subtraction                   |                0.41× |          1.00× |        1.9×10⁻⁷ | Yes; negative transfer neutralizes |
+| addition → multiplication (null control) |                1.15× |          1.18× |            0.59 | No                                 |
 
-Three qualitatively different outcomes appear across four pairs, all from the same protocol:
+Three qualitatively different outcomes appear across four pairs.
 
-- **multiplication → powers reverses direction**: a substantial positive transfer (2.17×) becomes a substantial negative one (0.72×), the "Case C" outcome. A sign-specific diagnostic breakdown of the trained clone's held-out error offers a plausible (not proven) mechanism: negative-base/odd-exponent inputs -- a case that does not exist at all in the non-negative domain, since the base was never negative there -- have by far the highest error (mean absolute error 0.89, 67% within-tolerance accuracy) of any quadrant, compared to 0.23 / 93% for positive-base inputs. The signed domain introduces a genuinely harder sub-problem that the multiplication-derived initialization is not well suited to, which is consistent with (though does not prove) the observed reversal.
-- **multiplication → squares erodes toward no effect** ("Case B"): the already-modest 1.23× shrinks to 1.01×, statistically indistinguishable from no speedup. The sign breakdown shows essentially symmetric error for positive- and negative-base inputs (0.486 vs 0.489 mean absolute error), consistent with squares' sign-invariance (`(-a)² = a²`) -- the erosion here looks more like the frozen compatibility score itself collapsing (0.0006 → ~4×10⁻¹⁴, since a signed multiplication network's output on squares' now-broader input region is an even worse frozen match) than a base-sign-specific difficulty effect.
-- **addition → subtraction's negative transfer neutralizes**: 0.41× (significantly worse than scratch) becomes 1.00× (no significant difference). The sign breakdown shows same-sign subtraction pairs, e.g. (+,+) and (-,-), are learned much more accurately (95-97% within-tolerance accuracy) than mixed-sign pairs (71%), consistent with same-sign subtraction behaving more like addition (which is what the parent skill actually learned) than mixed-sign subtraction does.
-- **addition → multiplication (the null control) stays stable**: 1.15× and 1.18×, not a significant difference (p=0.59). A null control that stays null under a manipulation that changes other pairs substantially is itself evidence the other three effects are real rather than an artifact of, say, reduced training-set effective size in the signed domain.
+**Multiplication → powers reverses direction.** A substantial positive transfer effect in the non-negative domain (2.17×) becomes negative transfer in the signed domain (0.72×). A sign-specific diagnostic breakdown of the trained clone's held-out error provides a plausible, but not proven, mechanism: negative-base/odd-exponent inputs, which do not occur in the non-negative domain, have substantially higher error than positive-base inputs. The signed domain therefore introduces a harder sub-problem that the multiplication-derived initialization appears poorly suited to under this protocol.
 
-**Acquisition reliability is also domain-sensitive, independent of speedup.** The fixed-target prerequisite-history matrix (Section 3.1's design) run under both domains shows squares' acquisition success rate -- already low in the non-negative domain (13-20% within the shared training budget, across prior-skill histories) -- drops to exactly 0% in the signed domain, for every history condition. This is a reliability collapse on top of an already-unreliable case, not merely a change in the size of an existing effect.
+**Multiplication → squares erodes toward no effect.** The already modest 1.23× speedup shrinks to 1.01×. The sign-specific diagnostic shows essentially symmetric error for positive- and negative-base inputs (0.486 versus 0.489 mean absolute error), which is consistent with the sign-invariance of squares, \((-a)^2=a^2\). The erosion therefore appears more consistent with a deterioration in frozen compatibility across the expanded input region than with a base-sign-specific failure.
 
-**The compatibility score itself is domain-sensitive**, which has a direct behavioral consequence for the controller: division's compatibility score against an addition parent drops from 0.28-0.31 in the non-negative domain (comfortably above `τ_clone=0.15`, so the controller reliably chose `clone`) to 0.03-0.06 in the signed domain (below `τ_clone`, so the controller switched to `scratch` in 14-15 of 15 seeds). The controller is not making a fixed decision about a fixed task relationship -- its own inputs shift with the domain.
+**Addition → subtraction's negative transfer neutralizes.** The negative transfer observed in the non-negative domain (0.41×) becomes approximately neutral in the signed domain (1.00×). The sign breakdown shows that same-sign subtraction pairs are learned more accurately than mixed-sign pairs, consistent with same-sign subtraction sharing some structure with the addition parent while mixed-sign subtraction introduces a different input relationship.
 
-**Interpretation, held to the same standard as the rest of this paper:** the transfer effect was *not* robust to this tested domain expansion for two of the four pairs (multiplication→powers reversed, multiplication→squares eroded to null), *was* robust for the null control, and addition→subtraction's negative-transfer finding did not survive the expansion. This supports treating the Section 4.1 transfer results as **distribution-sensitive rather than fixed properties of the source-target task relationship** -- consistent with Section 4.1's own observation that a frozen compatibility score is an incomplete predictor of transfer benefit; here we see the score, and not only the benefit it's meant to predict, move with the domain. This conclusion is conditional on the tested non-negative/signed expansion specifically (`{0,...,9}` vs. `{-9,...,9}`-scale domains on these six arithmetic tasks); it should not be read as a claim about negative numbers in general or about domain robustness for architectures or task families not tested here.
+**Addition → multiplication remains a null control.** The speedup changes from 1.15× to 1.18×, with no statistically detectable difference between domains (\(p=0.59\)). The stability of this negative-control pair while the other three pairs change substantially argues against the explanation that the domain manipulation simply shifts every result through a generic training or sample-size artifact.
 
-### 4.2 Skill-isolation invariant check
+### Acquisition reliability under the signed domain
 
-The check evaluated four representative three-skill sequences across 15 seeds. Every recorded accuracy change was exactly 0.0, and every check passed the predeclared five-percentage-point tolerance. This is the expected result given the architecture, not a discovery: as described in Section 3.2, a frozen skill's parameters cannot change under this implementation, so a nonzero result was never a possible outcome for this particular check to find.
+The fixed-target prerequisite-history matrix was also evaluated under both domains. Squares' already-low acquisition success rate in the non-negative domain, approximately 13–20% across prior-skill histories, falls to exactly 0% in the signed domain for every history condition.
 
-The correct interpretation is narrow: **the implementation's skill-isolation guarantee holds -- previously acquired skills' stored parameters are provably unaffected by later acquisitions in this codebase.** This is a real and useful regression property (it rules out a class of bugs where a later training step accidentally touches a supposedly frozen skill), but it should not be read as empirical evidence that catastrophic forgetting is absent or difficult to produce in continual-learning systems generally -- this check's design has no mechanism through which forgetting could have appeared even if the underlying question were false for some other architecture.
+This is a reliability failure in addition to the transfer-efficiency changes. It should not be interpreted as evidence that signed inputs universally make squares difficult; it is evidence that this particular system and training protocol failed to acquire the signed-domain square task within the declared budget.
 
-A genuine empirical retention result would require a comparison arm where interference is actually possible (Section 3.2); that experiment is not part of this check and is noted as future work.
+### Compatibility and controller behavior
 
-### 4.3 Acquisition efficiency and reliability
+The compatibility score itself is domain-sensitive, which has a direct behavioral consequence for the controller.
 
-Acquisition speed is treated as a secondary outcome. A small speedup is not automatically practically important, and reliability is evaluated separately from efficiency. A strong acquisition result is one in which prior knowledge increases fixed-budget success or substantially reduces training cost without sacrificing final held-out performance.
+For division with an addition parent, compatibility falls from approximately 0.28–0.31 in the non-negative domain to approximately 0.03–0.06 in the signed domain. The former is above the clone threshold \(\tau_{\mathrm{clone}}=0.15\), whereas the latter is below it. Consequently, the controller switches from cloning toward scratch in 14–15 of 15 signed-domain seeds.
 
-The earlier experiments illustrate why these outcomes must remain separate: clone initialization can reach an early training threshold much faster while the resulting model quality depends on the stopping and evaluation protocol. The fixed-budget follow-up therefore provides an important control against interpreting early threshold crossing as a universal quality improvement.
+This is consistent with the intended controller behavior: it does not blindly preserve a source-target decision when the evidence used by the controller changes under the new input distribution.
+
+### Interpretation
+
+The signed-domain follow-up establishes that transfer **can be domain-sensitive** for this system under the tested expansion. It does not establish that transfer is always domain-sensitive, nor that negative numbers alone are responsible for the observed changes.
+
+The manipulation expands `{0,...,9}`-scale ranges to `{-9,...,9}`-scale ranges and therefore changes the input distribution in more than one way. The result should consequently be interpreted as evidence of **distribution sensitivity**, rather than as a distribution-independent causal effect of negative numbers.
+
+The null-control result strengthens this interpretation: addition → multiplication remains statistically stable while the other three pairs change qualitatively. Nevertheless, the conclusions remain conditional on this task family, architecture, controller, and specific domain expansion.
+
+### 4.5 Acquisition efficiency and reliability
+
+Acquisition speed is treated as a secondary outcome. A small speedup is not automatically practically important, and reliability is evaluated separately from efficiency.
+
+A strong acquisition result is one in which prior knowledge increases fixed-budget success or substantially reduces training cost without sacrificing final held-out performance.
+
+The fixed-target matrix is the primary current evidence for history-dependent acquisition behavior. The historical relatedness-pair speedups remain useful contextual evidence, while the signed-domain follow-up demonstrates that those transfer effects can change under a distribution shift.
 
 ## 5. Statistical analysis
 
-For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries should include the mean paired difference, standard deviation, confidence or bootstrap interval, effect size, and an appropriate paired significance test where sample size and distributional assumptions permit.
+For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries include the mean paired difference, variability, interval estimates, effect sizes, and paired significance tests where appropriate for acquisition comparisons.
 
-For the skill-isolation invariant check, the recorded quantity is the same form:
+For the signed-domain comparisons, each seed is paired across the non-negative and signed conditions. The paired test therefore evaluates within-seed changes rather than treating the two domains as independent samples.
 
-\[
-\Delta_i = A_{i,\mathrm{post}} - A_{i,\mathrm{pre}},
-\]
+The retention check is intentionally treated differently. Its primary diagnostic quantity is:
 
-where accuracy is measured on the same evaluation set for the same skill and seed, and the practical pass rule is \(\Delta_i \ge -0.05\). Unlike the paired strategy comparisons above, \(\Delta_i\) has zero variance across seeds under the current architecture (Section 3.2), so no confidence interval or effect size is reported for it -- those tools describe uncertainty in a sampling process, and there is none here to describe. The five-percentage-point tolerance is retained as a sanity bound: a violation would indicate an implementation bug, not a statistically surprising result.
+$$
+\Delta A_i=
+A_{i,\mathrm{post}}-A_{i,\mathrm{pre}},
+$$
 
-Success rate is reported separately from convergence speed. If all conditions reach the fixed budget successfully, training cost and convergence distributions become the more informative secondary outcomes.
+where accuracy is measured on the same retention set for the same skill and seed. The practical diagnostic rule is:
+
+$$
+\Delta A_i\geq-0.05.
+$$
+
+This five-percentage-point value is a declared practical tolerance. It is not a statistical equivalence margin derived from an external validation study.
+
+Because the isolated parent network is not modified between the two evaluations, a zero retention delta is an expected consequence of the mechanism. Statistical inference on this delta therefore does not answer the stronger scientific question of whether a system resists interference when interference is possible. A genuine empirical forgetting study would require an at-risk baseline in which later learning can alter parameters supporting earlier skills.
+
+Success rate is reported separately from convergence speed. If all conditions reach the fixed budget successfully, training-cost and convergence distributions become the more informative secondary outcomes.
 
 ## 6. Discussion
 
@@ -127,48 +287,77 @@ The combined findings support a simple design principle: a continual skill-acqui
 
 The three-route controller is therefore important. Reuse is appropriate when an existing skill genuinely solves the target. Clone-and-adapt provides a way to exploit a useful initialization without modifying the parent. Scratch remains necessary because prior knowledge can be irrelevant or negatively transferable.
 
-The skill-isolation invariant check supports the architectural design rationale: storing skills independently and never modifying a stored skill's parameters is, by construction, a way to accumulate capabilities without overwriting earlier ones. This is a property of the design that the check confirms holds in the implementation, not a discovered empirical resistance to forgetting -- the distinction matters because the purpose of skill acquisition is to accumulate capabilities over time, and a design-level guarantee is a reasonable way to pursue that, but it is a different kind of claim than an empirical result obtained from an architecture where forgetting was actually possible.
+The authoritative fixed-target results strengthen this interpretation: powers benefit from additional prior history, while division exhibits negative transfer and squares remains difficult. These heterogeneous outcomes prevent the conclusion from being reduced to "cloning always helps."
 
-At the same time, the heterogeneous transfer results show that the harder scientific question is not simply whether cloning works. It is **why some skills benefit from prior knowledge while others do not**. That question is intentionally separated from the present paper's main acquisition-and-retention objective and can form a follow-up study based on the present experimental framework.
+The signed-domain follow-up adds an important qualification. Transfer benefits are not fixed properties of source-target task labels alone. Under the tested distribution expansion, multiplication → powers reverses direction, multiplication → squares approaches no effect, and addition → subtraction's negative transfer disappears, while the null control remains stable. This suggests that the usefulness of a cloned representation depends jointly on the source-target relationship and the distribution on which that relationship is evaluated.
+
+The skill-isolation invariant check supports the architectural design rationale: independently storing skills and avoiding updates to stored parent parameters provides a direct mechanism for accumulating capabilities without overwriting earlier skills. This is a design-level guarantee confirmed by the implementation check, not an empirical demonstration that catastrophic forgetting is absent from continual-learning systems generally.
+
+At the same time, the heterogeneous transfer results show that the harder scientific question is not simply whether cloning works. It is **why some skills benefit from prior knowledge while others do not**, and why the same source-target relationship can behave differently under a changed input distribution. That question provides a natural direction for future work.
 
 ## 7. Limitations and threats to validity
 
 1. **Small task family.** The experiments use a small set of arithmetic functions and therefore cannot establish behavior across broad classes of machine-learning tasks.
+
 2. **Small model.** Results may depend on the architecture, parameter count, optimizer, and training dynamics.
+
 3. **Finite seeds.** Fifteen seeds provide useful matched comparisons but do not establish universal population-level behavior.
+
 4. **Controller dependence.** The results depend on the compatibility probe, thresholds, and solved-target gate.
-5. **The skill-isolation check is an implementation invariant, not an empirical retention result.** Under the tested architecture, a stored skill's parameters cannot change once acquired, so the check's zero-delta outcome was the only possible result given the code as written -- it demonstrates the isolation guarantee holds (a real, useful regression property) but says nothing about whether forgetting would occur in an architecture where interference is actually possible. No confidence interval or effect size is reported for this check because the quantity it measures has no sampling variance to describe.
+
+5. **The skill-isolation check is an implementation invariant, not an empirical retention result.** Under the tested architecture, a stored skill's parameters cannot change once acquired. The zero-delta outcome therefore confirms the isolation implementation rather than providing statistical evidence about resistance to interference.
+
 6. **No universal prerequisite claim.** Earlier acquisition in a curriculum is evidence about transfer under that protocol, not proof of a formal prerequisite relationship.
+
 7. **Potential task-family confounds.** Arithmetic tasks share representations and input structure, so transfer behavior may differ substantially in other domains.
-8. **Practical tolerance.** The five-percentage-point tolerance in the isolation check is a sanity bound retained from the original design, not a statistical equivalence margin -- a violation would indicate a bug, not a surprising result.
-9. **The signed-domain follow-up (Section 4.4) tested one specific expansion.** `{0,...,9}`-scale ranges to `{-9,...,9}`-scale ranges, on the same six arithmetic tasks, same architecture, same seeds. It demonstrates that transfer *can* be domain-sensitive for this system, not that it always is, nor how it would generalize to other kinds of distribution shift (different scale, different sparsity, non-arithmetic tasks, larger models). Expanding a domain also changes more than "whether negative values are present" -- it changes the input distribution as a whole (Section 11 of the underlying plan raises this explicitly); this experiment tests domain/distribution sensitivity, not an abstract, distribution-independent property of negative numbers.
+
+8. **Practical tolerance.** The five-percentage-point tolerance in the isolation check is a sanity bound, not a statistical equivalence margin. A violation would indicate an implementation problem rather than establish a population-level effect.
+
+9. **Specific signed-domain expansion.** The signed-domain follow-up tests one particular expansion from `{0,...,9}`-scale ranges to `{-9,...,9}`-scale ranges on the tested arithmetic tasks. It demonstrates that transfer can be domain-sensitive for this system, not that negative numbers universally cause transfer changes or that the result generalizes to arbitrary distribution shifts.
+
+10. **Distribution shift versus sign effect.** Expanding the domain changes the input distribution in ways beyond simply introducing negative values. The experiment therefore supports a claim about domain/distribution sensitivity rather than an isolated causal claim about the presence of negative numbers.
+
+11. **Acquisition reliability.** The fixed training budget creates a distinction between failure to acquire a skill within the budget and impossibility of acquiring that skill. The reported success rates should therefore be interpreted relative to the declared budget and stopping criterion.
 
 ## 8. Reproducibility
 
-The repository contains the experiment drivers, regression tests, workflow configuration, raw CSV outputs, statistical summaries, and plots. CI reruns the experiments and uploads the generated artifacts. The skill-isolation invariant check additionally records the exact seed, target sequence, acquisition strategy, source skill, compatibility diagnostics, pre/post accuracy, the recorded accuracy change, and the pass/fail decision for each measured run.
+The repository contains the experiment drivers, regression tests, workflow configuration, raw CSV outputs, statistical summaries, and plots. CI reruns the experiments and uploads generated artifacts.
+
+The skill-isolation check records the seed, target sequence, acquisition strategy, source skill, compatibility diagnostics, pre/post accuracy, recorded accuracy change, and pass/fail decision.
+
+The signed-domain follow-up records both domain conditions under matched seeds and includes per-seed pair results, summary statistics, sign-specific diagnostic breakdowns, and generated plots.
+
+The non-negative domain remains the default task configuration. The signed domain is an explicit experimental configuration and does not silently alter the baseline task distribution.
 
 ## 9. Conclusion
 
 This prototype demonstrates a controlled approach to continual skill acquisition in which the system can choose among reuse, clone-and-adapt, and scratch learning while preserving previously acquired skills through independent storage.
 
-The most defensible conclusion is not that cloning always improves learning. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, that this transfer behavior is itself sensitive to the input domain rather than a fixed property of a source-target pair (Section 4.4), while the isolated-skill mechanism's design guarantees -- confirmed to hold in the implementation by the skill-isolation check -- add new capabilities without modifying previously stored skills' parameters under the tested conditions.
+The most defensible conclusion is not that cloning always improves learning. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, and that these transfer effects can themselves be sensitive to the input distribution. The signed-domain follow-up demonstrates this sensitivity directly: multiplication → powers reverses from positive to negative transfer, multiplication → squares moves toward no effect, and addition → subtraction's negative transfer neutralizes, while the null control remains stable.
 
-The work therefore establishes a useful experimental foundation for a broader research program: first characterize reliable skill acquisition (and confirm the isolation guarantee the architecture depends on), then investigate the factors that determine why one skill transfers well and another does not and how sensitive that determination is to the task distribution, and eventually test retention in a setting where interference is actually possible.
+The isolated-skill mechanism provides a separate implementation-level guarantee: previously stored skills are not modified during later acquisition under the tested architecture. This is a useful architectural property, but it should not be confused with an empirical demonstration of resistance to catastrophic forgetting.
+
+The work therefore establishes an experimental foundation for a broader research program: characterize reliable skill acquisition, understand when and why transfer helps or hurts, study how transfer depends on task distributions, and eventually evaluate retention using explicit at-risk interference baselines and broader task families.
 
 ## 10. Reproducibility checklist
 
-- [x] Reuse / clone / scratch routes implemented.
-- [x] Corrected reuse gate requires independent solved-target evidence.
-- [x] Genuine scratch fallback retained.
-- [x] Matched seeds used for paired comparisons.
-- [x] Held-out evaluation separated from training and controller data.
-- [x] Skill-isolation invariant evaluated on stable skill-specific evaluation sets.
-- [x] Isolation-check tolerance declared before interpretation; documented as a sanity bound, not a statistical margin.
-- [x] Per-seed isolation-check data and summary outputs generated.
-- [x] CI executes the skill-isolation check and regression tests.
-- [x] Isolation check's summary and paper text describe it as an implementation invariant, not a statistical retention experiment (no bootstrap CI or effect size reported for a zero-variance quantity).
-- [ ] Final prerequisite-matrix expansion and its final statistical tables should be included only after that experiment is the authoritative merged result.
-- [ ] A genuine empirical retention test (interference-risking baseline extended to this experiment's task sequences) is noted as future work, not yet implemented.
-- [x] Signed-domain follow-up: non-negative domain preserved as the default and verified byte-identical to pre-follow-up results; signed domain added as an explicit, separate configuration (not a silent range change).
-- [x] Signed-domain comparisons use matched seeds, identical architecture/optimizer/budget/controller/thresholds/data-role separation to the non-negative baseline -- only the operand domain differs.
-- [x] Signed-domain results reported with paired statistics (mean, std, paired t-test) and explicitly flagged as conditional on the tested domain expansion, not a general claim about negative numbers.
+* [x] Reuse / clone / scratch routes implemented.
+* [x] Corrected reuse gate requires independent solved-target evidence.
+* [x] Genuine scratch fallback retained.
+* [x] Matched seeds used for paired comparisons.
+* [x] Held-out evaluation separated from training and controller data.
+* [x] Skill-isolation invariant evaluated on stable skill-specific evaluation sets.
+* [x] Isolation-check tolerance declared before interpretation as a sanity bound.
+* [x] Per-seed isolation-check data and summary outputs generated.
+* [x] CI executes the skill-isolation check and regression tests.
+* [x] Isolation-check results are described as an implementation invariant rather than a statistical retention experiment.
+* [x] Historical relatedness-pair results retained separately from the authoritative fixed-target matrix.
+* [x] Fixed-target prerequisite-history analysis included as the current quantitative analysis.
+* [x] Signed-domain follow-up added as an explicit experimental configuration.
+* [x] Non-negative baseline preserved as the default domain.
+* [x] Signed-domain comparisons use matched seeds.
+* [x] Signed-domain analysis holds architecture, optimizer, training budget, controller, thresholds, and data-role separation fixed.
+* [x] Signed-domain results include paired statistical comparisons.
+* [x] Signed-domain conclusions are explicitly limited to the tested domain/distribution expansion.
+* [ ] A genuine at-risk empirical retention experiment with a shared-parameter interference baseline remains future work.
+* [ ] Broader task families and larger models remain future validation targets.
