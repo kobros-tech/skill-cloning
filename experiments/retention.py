@@ -1,35 +1,18 @@
 """Skill-isolation invariant check for Issue #3 / PR #5.
 
-Reframed after review (see PR #5 discussion): this is NOT a statistical
-retention experiment, and its output should not be read as empirical
-evidence against catastrophic forgetting in general.
+This is NOT a statistical retention experiment. Under the current independent-
+skill architecture, a previously acquired Skill's network is not optimized
+again during later acquisitions. Each retention re-evaluation uses the same
+frozen network and the same deterministic skill-specific evaluation batch.
+Therefore a zero retention delta is expected by construction.
 
-Why: in the current architecture, a previously acquired Skill's network is
-never touched again once training on it stops -- there is no code path that
-updates a frozen skill's parameters after later acquisitions. Every
-"post_accuracy" re-evaluation of an old skill uses the exact same frozen
-network on the exact same deterministic eval batch as its "pre_accuracy"
-baseline (same seed, same skill_stage). That means retention_delta == 0 for
-every check is a mathematical guarantee of the code as written, not a result
-that could have come out otherwise -- there is no forgetting mechanism in
-this experiment for the checks to detect. A bootstrap confidence interval or
-standardized effect size computed over a quantity with zero variance by
-construction is not meaningful statistical evidence, so this file no longer
-computes them.
-
-What this file legitimately verifies: that the isolation guarantee actually
-holds in the implementation (i.e. there is no bug that lets a later
-acquisition's gradient updates leak into a supposedly frozen skill). That is
-a real and useful regression check -- an implementation invariant -- just
-not a statistical experiment about robustness to catastrophic forgetting.
-
-For a genuine empirical test of forgetting, an interference-risking baseline
-is required -- see results/report.md's original shared-network comparison,
-where the shared network's weights ARE overwritten by later training and
-retention is a real (not tautological) empirical question. Extending that
-comparison to this experiment's task sequences, rather than reusing the
-original 4-task-curriculum numbers as-is, is noted as a possible future
-PR rather than done here, to avoid redesigning this PR's scope.
+What this check legitimately verifies is the implementation invariant: later
+acquisition must not mutate a supposedly frozen skill. The check is useful as
+a regression guard against accidental parameter leakage, but it is not
+empirical evidence that catastrophic forgetting is absent in architectures
+where interference is possible. A genuine empirical forgetting experiment
+would require an interference-risking baseline such as a shared-parameter
+architecture.
 """
 from __future__ import annotations
 
@@ -56,10 +39,8 @@ LR = 0.02
 MAX_EPOCHS = 1500
 ACC_TOL = 0.5
 ACC_TARGET = 0.85
-# Predeclared practical tolerance: five percentage points of absolute accuracy.
-# Kept as a sanity bound for the invariant check (retention_pass should be
-# trivially true for every row given the architecture -- a failure would
-# indicate a real bug, e.g. a frozen skill being accidentally mutated).
+# Retained as a practical sanity bound. A violation indicates an isolation
+# implementation bug rather than an inferentially surprising observation.
 RETENTION_TOLERANCE = 0.05
 
 TASK_SEED_INDEX = {
@@ -202,18 +183,7 @@ def run_all_sequences(n_seeds: int = N_SEEDS):
 
 
 def summarize(raw: pd.DataFrame) -> pd.DataFrame:
-    """Summarize only post-acquisition invariant checks, excluding baselines.
-
-    Deliberately does NOT compute a bootstrap confidence interval or a
-    standardized effect size on retention_delta: under this architecture
-    retention_delta has zero variance by construction (see module docstring),
-    so those statistics would describe sampling uncertainty that does not
-    exist here rather than anything empirical. What's reported instead is a
-    direct, honest summary of the invariant itself: whether every check
-    actually landed at delta == 0, and the largest deviation observed (which
-    should be exactly 0.0 -- any nonzero value here would indicate a real bug
-    in skill isolation, not sampling noise).
-    """
+    """Summarize invariant checks without inferential statistics."""
     retention = raw[raw["is_retention_check"]].copy()
     rows = []
     group_cols = ["sequence", "stage", "new_task", "evaluated_skill"]
@@ -276,12 +246,10 @@ def main():
     summary.to_csv(out_dir / "retention_summary.csv", index=False)
     make_plot(summary, out_dir / "plot_retention.png")
 
-    print("Skill-isolation invariant check (NOT a statistical retention experiment --")
-    print("see module docstring: retention_delta has zero variance by construction")
-    print("under this architecture, so no confidence interval or effect size is computed)")
+    print("Skill-isolation invariant check (not a statistical retention experiment)")
+    print("Retention delta is expected to be exactly zero because stored skills are frozen")
     print(f"Seeds per sequence: {N_SEEDS}; sequences: {len(SEQUENCES)}")
-    print(f"Retention tolerance: {RETENTION_TOLERANCE:.1%} absolute accuracy drop (sanity bound; any")
-    print("failure would indicate a bug, not natural variation)")
+    print(f"Sanity tolerance: {RETENTION_TOLERANCE:.1%} absolute accuracy drop")
     print()
     print(summary.to_string(index=False))
 
