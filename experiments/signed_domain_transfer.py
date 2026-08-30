@@ -1,72 +1,10 @@
 """Signed-domain transfer-robustness / domain-sensitivity analysis.
 
-Research question (primary):
-    Does the source-target transfer behavior observed in the existing
-    (non-negative-domain) experiments persist when the task distribution is
-    expanded to include negative operands?
-
-Secondary question:
-    Does expanding the input domain change which prior skills are useful,
-    neutral, or harmful?
-
-This is a robustness/domain-sensitivity study, not an attempt to reproduce a
-particular preferred result. If signed-domain results differ from the
-non-negative baseline, that difference is itself the finding -- it means
-transfer depends on the input distribution rather than being a fixed
-property of the source-target task pair. See docs/final_paper.md's
-"Domain-sensitivity analysis" section for the full interpretation.
-
-Design, matching the plan this experiment implements:
-  - Only the operand domain changes between conditions. Architecture, hidden
-    size, optimizer, learning rate, initialization, batch size (N_TRAIN),
-    stopping criterion, training budget, seed protocol, compatibility
-    calculation, controller thresholds, and data-role separation are all
-    identical to the existing experiments (relatedness_pairs.py,
-    squares_relatedness.py, stopping_rule_confound.py).
-  - The non-negative domain is tasks.py's default ("nonnegative") and is
-    untouched -- every existing result remains reproducible byte-for-bit
-    (verified separately; see the tasks.py commit).
-  - Matched seeds: seed r uses the identical seed in both domains, so every
-    comparison below is paired by seed, not just by condition.
-  - Powers keeps its exponent non-negative in both domains (a negative
-    exponent introduces fractional targets, which would confound operand
-    sign with a change in the target's numeric structure).
-  - Division's divisor is never zero in either domain (see tasks.py).
-
-Two experiments are run, both under both domains with the same seeds:
-
-  A. The four scientifically load-bearing relatedness pairs from the
-     existing paper: multiplication->powers, multiplication->squares,
-     addition->subtraction, addition->multiplication. Clone vs. scratch,
-     forced clone (matching relatedness_pairs.py's ancestor,
-     squares_relatedness.py / stopping_rule_confound.py's methodology) --
-     this isolates "does a related parent still speed up training" from
-     "does the controller still decide to use it", which is answered
-     separately by experiment B.
-
-  B. The fixed-target prerequisite-history matrix (subtraction / division /
-     squares / powers, under no-prior / addition / addition+multiplication),
-     using the actual compatibility-gated controller
-     (compatibility.decide()) -- the same design as
-     experiments/relatedness_pairs.py, parameterized by domain.
-
-Sign-specific diagnostics (Section 10 of the plan) are computed for the
-three pairs where a domain effect is most plausible on structural grounds:
-multiplication->powers, multiplication->squares, addition->subtraction.
-
-Usage from the repository root:
-    python experiments/signed_domain_transfer.py
-
-Output:
-    results/signed_domain_pairs.csv
-    results/signed_domain_pairs_summary.csv
-    results/signed_domain_history.csv
-    results/signed_domain_history_summary.csv
-    results/signed_domain_sign_breakdown.csv
-    results/plot_signed_domain_speedup.png
-    results/plot_signed_domain_success_rate.png
-    results/plot_signed_domain_compatibility_vs_speedup.png
-    results/plot_signed_domain_convergence.png
+The experiment compares the existing non-negative arithmetic domain with a
+matched signed-integer domain. A prerequisite/source skill is only exposed to
+the controller after it has actually reached the declared acquisition
+criterion. Likewise, the forced-clone pair analysis is only a valid transfer
+comparison when the source skill was successfully acquired.
 """
 from __future__ import annotations
 
@@ -126,7 +64,6 @@ HISTORY_CONDITIONS = [
     ("powers", ("addition", "multiplication"), "addition+multiplication"),
 ]
 
-# Pairs diagnosed for sign-specific effects (Section 10 of the plan).
 SIGN_DIAGNOSTIC_PAIRS = [
     ("multiplication", "powers"),
     ("multiplication", "squares"),
@@ -135,7 +72,7 @@ SIGN_DIAGNOSTIC_PAIRS = [
 
 
 def train_to_accuracy(net, X, y, max_epochs: int = MAX_EPOCHS):
-    """Train up to max_epochs. Returns (epochs_taken, reached_target: bool)."""
+    """Train up to max_epochs and return (epochs_taken, reached_target)."""
     for epoch in range(1, max_epochs + 1):
         net.train_step(X, y, lr=LR)
         if net.accuracy(X, y, tol=ACC_TOL) >= ACC_TARGET:
@@ -147,24 +84,46 @@ def _task_seed(seed: int, salt: int, task: str, offset: int = 0) -> int:
     return seed * 100_000 + salt * 1_000 + TASK_SEED_INDEX[task] + offset
 
 
-# --------------------------------------------------------------------------
-# Experiment A: forced-clone relatedness pairs, both domains, matched seeds.
-# --------------------------------------------------------------------------
+def _invalid_pair_row(source, target, relatedness_label, domain, seed, parent_epochs):
+    """Return an explicit invalid comparison when source acquisition fails."""
+    return {
+        "domain": domain,
+        "pair": f"{source}->{target}",
+        "relatedness_label": relatedness_label,
+        "source_task": source,
+        "target_task": target,
+        "seed": seed,
+        "relatedness_score": np.nan,
+        "solve_accuracy": np.nan,
+        "parent_epochs": parent_epochs,
+        "parent_reached": False,
+        "pair_valid": False,
+        "clone_epochs": np.nan,
+        "clone_success": np.nan,
+        "scratch_epochs": np.nan,
+        "scratch_success": np.nan,
+        "speedup": np.nan,
+        "clone_heldout_mse": np.nan,
+        "scratch_heldout_mse": np.nan,
+    }
+
 
 def run_pair_domain(source: str, target: str, relatedness_label: str, domain: str, seed: int) -> dict:
-    src_seed = _task_seed(seed, 1, source, offset=0)
-    tgt_seed = _task_seed(seed, 1, target, offset=0)
+    """Run a forced-clone comparison only after source acquisition succeeds."""
+    src_seed = _task_seed(seed, 1, source)
+    tgt_seed = _task_seed(seed, 1, target)
 
     X_src, y_src = sample_task(source, N_TRAIN, seed=src_seed, domain=domain)
     parent = TinyMLP(hidden_dim=HIDDEN_DIM, seed=src_seed)
     parent.reset_optimizer()
     parent_epochs, parent_reached = train_to_accuracy(parent, X_src, y_src)
+    if not parent_reached:
+        return _invalid_pair_row(source, target, relatedness_label, domain, seed, parent_epochs)
 
     rel_score = comp.compatibility_score(parent, target, tgt_seed, domain=domain)
     solve_acc = comp.solve_probe_accuracy(parent, target, tgt_seed, domain=domain)
 
     X_tgt, y_tgt = sample_task(target, N_TRAIN, seed=tgt_seed, domain=domain)
-
     clone = parent.clone()
     clone.reset_optimizer()
     scratch = TinyMLP(hidden_dim=HIDDEN_DIM, seed=tgt_seed)
@@ -174,9 +133,6 @@ def run_pair_domain(source: str, target: str, relatedness_label: str, domain: st
     scratch_epochs, scratch_success = train_to_accuracy(scratch, X_tgt, y_tgt)
 
     X_hold, y_hold = sample_task(target, N_EVAL, seed=tgt_seed + 500_000, domain=domain)
-    clone_heldout_mse = clone.mse(X_hold, y_hold)
-    scratch_heldout_mse = scratch.mse(X_hold, y_hold)
-
     return {
         "domain": domain,
         "pair": f"{source}->{target}",
@@ -187,46 +143,50 @@ def run_pair_domain(source: str, target: str, relatedness_label: str, domain: st
         "relatedness_score": rel_score,
         "solve_accuracy": solve_acc,
         "parent_epochs": parent_epochs,
-        "parent_reached": parent_reached,
+        "parent_reached": True,
+        "pair_valid": True,
         "clone_epochs": clone_epochs,
         "clone_success": clone_success,
         "scratch_epochs": scratch_epochs,
         "scratch_success": scratch_success,
         "speedup": scratch_epochs / clone_epochs,
-        "clone_heldout_mse": clone_heldout_mse,
-        "scratch_heldout_mse": scratch_heldout_mse,
+        "clone_heldout_mse": float(clone.mse(X_hold, y_hold)),
+        "scratch_heldout_mse": float(scratch.mse(X_hold, y_hold)),
     }
 
 
 def run_all_pairs(n_seeds: int = N_SEEDS) -> pd.DataFrame:
-    rows = []
-    for domain in DOMAINS:
-        for source, target, label in PAIRS:
-            for seed in range(n_seeds):
-                rows.append(run_pair_domain(source, target, label, domain, seed))
-    return pd.DataFrame(rows)
+    return pd.DataFrame(
+        run_pair_domain(source, target, label, domain, seed)
+        for domain in DOMAINS
+        for source, target, label in PAIRS
+        for seed in range(n_seeds)
+    )
 
 
 def summarize_pairs(raw: pd.DataFrame) -> pd.DataFrame:
     rows = []
     for (domain, pair), group in raw.groupby(["domain", "pair"], sort=False):
+        valid = group[group["pair_valid"]]
         rows.append({
             "domain": domain,
             "pair": pair,
             "relatedness_label": group["relatedness_label"].iloc[0],
             "n_seeds": len(group),
-            "mean_relatedness_score": group["relatedness_score"].mean(),
-            "mean_clone_epochs": group["clone_epochs"].mean(),
-            "std_clone_epochs": group["clone_epochs"].std(),
-            "mean_scratch_epochs": group["scratch_epochs"].mean(),
-            "std_scratch_epochs": group["scratch_epochs"].std(),
-            "clone_success_rate": group["clone_success"].mean(),
-            "scratch_success_rate": group["scratch_success"].mean(),
-            "mean_speedup": group["speedup"].mean(),
-            "std_speedup": group["speedup"].std(),
-            "median_speedup": group["speedup"].median(),
+            "valid_pairs": len(valid),
+            "source_failures": int((~group["parent_reached"]).sum()),
+            "mean_relatedness_score": valid["relatedness_score"].mean() if len(valid) else np.nan,
+            "mean_clone_epochs": valid["clone_epochs"].mean() if len(valid) else np.nan,
+            "std_clone_epochs": valid["clone_epochs"].std() if len(valid) else np.nan,
+            "mean_scratch_epochs": valid["scratch_epochs"].mean() if len(valid) else np.nan,
+            "std_scratch_epochs": valid["scratch_epochs"].std() if len(valid) else np.nan,
+            "clone_success_rate": valid["clone_success"].mean() if len(valid) else np.nan,
+            "scratch_success_rate": valid["scratch_success"].mean() if len(valid) else np.nan,
+            "mean_speedup": valid["speedup"].mean() if len(valid) else np.nan,
+            "std_speedup": valid["speedup"].std() if len(valid) else np.nan,
+            "median_speedup": valid["speedup"].median() if len(valid) else np.nan,
         })
-    order = {p: i for i, (s, t, _) in enumerate(PAIRS) for p in [f"{s}->{t}"]}
+    order = {f"{s}->{t}": i for i, (s, t, _) in enumerate(PAIRS)}
     summary = pd.DataFrame(rows)
     summary["_o1"] = summary["domain"].map({d: i for i, d in enumerate(DOMAINS)})
     summary["_o2"] = summary["pair"].map(order)
@@ -234,17 +194,18 @@ def summarize_pairs(raw: pd.DataFrame) -> pd.DataFrame:
 
 
 def paired_domain_comparison_pairs(raw: pd.DataFrame) -> pd.DataFrame:
-    """For each pair, compare non-negative vs signed speedup, paired by seed."""
+    """Compare domain speedups only for seeds valid in both domains."""
     rows = []
     for pair in raw["pair"].unique():
         sub = raw[raw["pair"] == pair]
-        nn = sub[sub["domain"] == "nonnegative"].set_index("seed")
-        sg = sub[sub["domain"] == "signed"].set_index("seed")
+        nn = sub[(sub["domain"] == "nonnegative") & sub["pair_valid"]].set_index("seed")
+        sg = sub[(sub["domain"] == "signed") & sub["pair_valid"]].set_index("seed")
         common = nn.index.intersection(sg.index)
         if len(common) < 2:
             continue
-        a, b = nn.loc[common, "speedup"], sg.loc[common, "speedup"]
-        t_stat, p_val = stats.ttest_rel(a, b)
+        a = nn.loc[common, "speedup"]
+        b = sg.loc[common, "speedup"]
+        _, p_val = stats.ttest_rel(a, b)
         diff = a.values - b.values
         rows.append({
             "pair": pair,
@@ -252,35 +213,70 @@ def paired_domain_comparison_pairs(raw: pd.DataFrame) -> pd.DataFrame:
             "mean_speedup_nonnegative": a.mean(),
             "mean_speedup_signed": b.mean(),
             "mean_paired_diff (nonneg-signed)": diff.mean(),
-            "std_paired_diff": diff.std(ddof=1) if len(diff) > 1 else float("nan"),
+            "std_paired_diff": diff.std(ddof=1),
             "paired_t_p": p_val,
             "direction_reversed": bool((a.mean() > 1.0) != (b.mean() > 1.0)),
         })
     return pd.DataFrame(rows)
 
 
-# --------------------------------------------------------------------------
-# Experiment B: fixed-target prerequisite-history matrix, both domains.
-# --------------------------------------------------------------------------
-
 def acquire_prior_skills_domain(prior_tasks, seed: int, condition_index: int, domain: str):
+    """Return skills plus per-prerequisite outcomes; failed prerequisites are unavailable."""
     skills = {}
+    prior_rows = []
+    history_valid = True
     for task in prior_tasks:
         task_seed = _task_seed(seed, condition_index, task, offset=10_000)
         X, y = sample_task(task, N_TRAIN, seed=task_seed, domain=domain)
         net = TinyMLP(hidden_dim=HIDDEN_DIM, seed=task_seed)
         net.reset_optimizer()
-        train_to_accuracy(net, X, y)
-        skills[task] = Skill(task, net, origin="scratch", parent=None)
-    return skills
+        steps, success = train_to_accuracy(net, X, y)
+        prior_rows.append({
+            "prior_task": task,
+            "prior_training_steps": steps,
+            "prior_acquisition_success": bool(success),
+        })
+        if success:
+            skills[task] = Skill(task, net, origin="scratch", parent=None)
+        else:
+            history_valid = False
+    return skills, prior_rows, history_valid
 
 
 def run_history_condition_domain(target, prior_tasks, history_label, domain, seed, condition_index):
-    skills = acquire_prior_skills_domain(prior_tasks, seed, condition_index, domain)
+    skills, prior_rows, history_valid = acquire_prior_skills_domain(
+        prior_tasks, seed, condition_index, domain
+    )
+    row = {
+        "domain": domain,
+        "target_task": target,
+        "prior_history": history_label,
+        "prior_tasks": "+".join(prior_tasks) if prior_tasks else "none",
+        "seed": seed,
+        "prior_history_valid": bool(history_valid),
+    }
+    for item in prior_rows:
+        prefix = item["prior_task"]
+        row[f"{prefix}_prior_steps"] = item["prior_training_steps"]
+        row[f"{prefix}_prior_success"] = item["prior_acquisition_success"]
+
+    if not history_valid:
+        row.update({
+            "strategy": "prerequisite_failed",
+            "source_task": None,
+            "compatibility_score": np.nan,
+            "solve_accuracy": np.nan,
+            "adaptation_steps": np.nan,
+            "fixed_budget": MAX_EPOCHS,
+            "target_attempted": False,
+            "acquisition_success": False,
+            "heldout_accuracy": np.nan,
+            "heldout_mse": np.nan,
+        })
+        return row
 
     controller_seed = _task_seed(seed, condition_index, target, offset=20_000)
     decision = comp.decide(skills, target, base_seed=controller_seed, domain=domain)
-
     target_train_seed = _task_seed(seed, condition_index, target, offset=30_000)
     X_target, y_target = sample_task(target, N_TRAIN, seed=target_train_seed, domain=domain)
 
@@ -301,46 +297,54 @@ def run_history_condition_domain(target, prior_tasks, history_label, domain, see
 
     test_seed = _task_seed(seed, condition_index, target, offset=40_000)
     X_test, y_test = sample_task(target, N_EVAL, seed=test_seed, domain=domain)
-
-    return {
-        "domain": domain,
-        "target_task": target,
-        "prior_history": history_label,
-        "seed": seed,
+    row.update({
         "strategy": decision["action"],
         "source_task": parent,
         "compatibility_score": float(decision["score"]),
+        "solve_accuracy": float(decision["solve_accuracy"]),
         "adaptation_steps": steps,
+        "fixed_budget": MAX_EPOCHS,
+        "target_attempted": True,
         "acquisition_success": bool(success),
         "heldout_accuracy": float(net.accuracy(X_test, y_test, tol=ACC_TOL)),
         "heldout_mse": float(net.mse(X_test, y_test)),
-    }
+    })
+    return row
 
 
 def run_all_history(n_seeds: int = N_SEEDS) -> pd.DataFrame:
-    rows = []
-    for domain in DOMAINS:
-        for condition_index, (target, prior_tasks, label) in enumerate(HISTORY_CONDITIONS):
-            for seed in range(n_seeds):
-                rows.append(run_history_condition_domain(target, prior_tasks, label, domain, seed, condition_index))
-    return pd.DataFrame(rows)
+    return pd.DataFrame(
+        run_history_condition_domain(target, prior, label, domain, seed, i)
+        for domain in DOMAINS
+        for i, (target, prior, label) in enumerate(HISTORY_CONDITIONS)
+        for seed in range(n_seeds)
+    )
 
 
 def summarize_history(raw: pd.DataFrame) -> pd.DataFrame:
     rows = []
-    for (domain, target, history), group in raw.groupby(["domain", "target_task", "prior_history"], sort=False):
+    for (domain, target, history), group in raw.groupby(
+        ["domain", "target_task", "prior_history"], sort=False
+    ):
+        attempted = group[group["target_attempted"]]
         rows.append({
             "domain": domain,
             "target_task": target,
             "prior_history": history,
             "n_seeds": len(group),
-            "acquisition_success_rate": group["acquisition_success"].mean(),
-            "mean_adaptation_steps": group["adaptation_steps"].mean(),
-            "std_adaptation_steps": group["adaptation_steps"].std(),
-            "mean_heldout_accuracy": group["heldout_accuracy"].mean(),
+            "prior_history_valid": int(group["prior_history_valid"].sum()),
+            "prerequisite_failures": int((~group["prior_history_valid"]).sum()),
+            "target_attempts": int(group["target_attempted"].sum()),
+            "acquisition_successes": int(group["acquisition_success"].sum()),
+            "acquisition_success_rate": attempted["acquisition_success"].mean() if len(attempted) else np.nan,
+            "mean_adaptation_steps": attempted["adaptation_steps"].mean() if len(attempted) else np.nan,
+            "std_adaptation_steps": attempted["adaptation_steps"].std() if len(attempted) else np.nan,
+            "mean_heldout_accuracy": attempted["heldout_accuracy"].mean() if len(attempted) else np.nan,
+            "std_heldout_accuracy": attempted["heldout_accuracy"].std() if len(attempted) else np.nan,
             "reuse_count": int((group["strategy"] == "reuse").sum()),
             "clone_count": int((group["strategy"] == "clone").sum()),
             "scratch_count": int((group["strategy"] == "scratch").sum()),
+            "prerequisite_failed_count": int((group["strategy"] == "prerequisite_failed").sum()),
         })
     order = {(t, h): i for i, (t, _, h) in enumerate(HISTORY_CONDITIONS)}
     summary = pd.DataFrame(rows)
@@ -349,42 +353,30 @@ def summarize_history(raw: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["_o2", "_o1"]).drop(columns=["_o1", "_o2"]).reset_index(drop=True)
 
 
-# --------------------------------------------------------------------------
-# Sign-specific diagnostics (Section 10 of the plan).
-# --------------------------------------------------------------------------
-
 def _quadrant_labels(task: str, X: np.ndarray) -> np.ndarray:
     a = X[:, 0]
     if task in ("multiplication", "subtraction"):
-        a_sign = np.where(a >= 0, "+", "-")
         b = X[:, 1]
-        b_sign = np.where(b >= 0, "+", "-")
-        return np.array([f"({sa},{sb})" for sa, sb in zip(a_sign, b_sign)])
+        sa = np.where(a >= 0, "+", "-")
+        sb = np.where(b >= 0, "+", "-")
+        return np.array([f"({x},{y})" for x, y in zip(sa, sb)])
     if task == "squares":
         return np.where(a >= 0, "positive base", "negative base")
     if task == "powers":
         exponent = np.round(X[:, 1] * 10).astype(int)
         base_sign = np.where(a >= 0, "positive base", "negative base")
         parity = np.where(exponent % 2 == 0, "even exponent", "odd exponent")
-        labels = []
-        for bs, p in zip(base_sign, parity):
-            if bs == "positive base":
-                labels.append("positive base")
-            else:
-                labels.append(f"negative base, {p}")
-        return np.array(labels)
+        return np.array([
+            "positive base" if bs == "positive base" else f"negative base, {p}"
+            for bs, p in zip(base_sign, parity)
+        ])
     raise ValueError(f"no quadrant scheme for task {task!r}")
 
 
 def sign_breakdown(net, task: str, seed: int, n: int = 2000) -> pd.DataFrame:
-    """Diagnostic-only: signed-domain accuracy/MSE of a trained network,
-    broken down by the sign structure of its inputs. Not used to pick a
-    stopping budget or threshold -- purely descriptive, computed after
-    training on a fresh signed-domain batch."""
     X, y = sample_task(task, n, seed=seed, domain="signed")
     labels = _quadrant_labels(task, X)
-    pred = net.predict(X)
-    err = np.abs(pred - y)
+    err = np.abs(net.predict(X) - y)
     rows = []
     for label in sorted(set(labels)):
         mask = labels == label
@@ -400,24 +392,22 @@ def sign_breakdown(net, task: str, seed: int, n: int = 2000) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def run_sign_breakdowns(pairs_raw: pd.DataFrame, n_seeds: int = N_SEEDS) -> pd.DataFrame:
-    """Re-trains the clone network for each diagnostic pair (signed domain
-    only) and records its sign-quadrant breakdown, seed by seed."""
+def run_sign_breakdowns(n_seeds: int = N_SEEDS) -> pd.DataFrame:
     rows = []
     for source, target in SIGN_DIAGNOSTIC_PAIRS:
         for seed in range(n_seeds):
-            src_seed = _task_seed(seed, 1, source, offset=0)
-            tgt_seed = _task_seed(seed, 1, target, offset=0)
+            src_seed = _task_seed(seed, 1, source)
+            tgt_seed = _task_seed(seed, 1, target)
             X_src, y_src = sample_task(source, N_TRAIN, seed=src_seed, domain="signed")
             parent = TinyMLP(hidden_dim=HIDDEN_DIM, seed=src_seed)
             parent.reset_optimizer()
-            train_to_accuracy(parent, X_src, y_src)
-
+            _, reached = train_to_accuracy(parent, X_src, y_src)
+            if not reached:
+                continue
             X_tgt, y_tgt = sample_task(target, N_TRAIN, seed=tgt_seed, domain="signed")
             clone = parent.clone()
             clone.reset_optimizer()
             train_to_accuracy(clone, X_tgt, y_tgt)
-
             breakdown = sign_breakdown(clone, target, seed=tgt_seed + 700_000)
             breakdown["pair"] = f"{source}->{target}"
             breakdown["seed"] = seed
@@ -425,88 +415,68 @@ def run_sign_breakdowns(pairs_raw: pd.DataFrame, n_seeds: int = N_SEEDS) -> pd.D
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
-# --------------------------------------------------------------------------
-# Plots
-# --------------------------------------------------------------------------
-
-def make_speedup_plot(pairs_summary: pd.DataFrame, out_path: Path):
+def make_speedup_plot(summary: pd.DataFrame, out_path: Path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-
     pairs = [f"{s}->{t}" for s, t, _ in PAIRS]
     fig, ax = plt.subplots(figsize=(8, 4.5))
     width = 0.35
     x = np.arange(len(pairs))
     for i, domain in enumerate(DOMAINS):
-        means, stds = [], []
-        for p in pairs:
-            row = pairs_summary[(pairs_summary["domain"] == domain) & (pairs_summary["pair"] == p)]
-            means.append(row["mean_speedup"].iloc[0] if len(row) else np.nan)
-            stds.append(row["std_speedup"].iloc[0] if len(row) else np.nan)
+        sub = summary[summary["domain"] == domain].set_index("pair")
+        means = [sub.loc[p, "mean_speedup"] if p in sub.index else np.nan for p in pairs]
+        stds = [sub.loc[p, "std_speedup"] if p in sub.index else np.nan for p in pairs]
         ax.bar(x + (i - 0.5) * width, means, width, yerr=stds, capsize=3, label=domain)
-    ax.axhline(1.0, color="gray", linestyle="--", linewidth=1)
+    ax.axhline(1.0, linestyle="--", linewidth=1)
     ax.set_xticks(x)
     ax.set_xticklabels(pairs, rotation=15, ha="right")
     ax.set_ylabel("Mean paired speedup (scratch epochs / clone epochs)")
-    ax.set_title("Transfer speedup: non-negative vs. signed domain\n(mean \u00b1 std over 15 seeds)")
+    ax.set_title("Transfer speedup: non-negative vs. signed domain")
     ax.legend(fontsize=8, title="Domain")
     fig.tight_layout()
     fig.savefig(out_path, dpi=140)
     plt.close(fig)
 
 
-def make_success_rate_plot(history_summary: pd.DataFrame, out_path: Path):
+def make_success_rate_plot(summary: pd.DataFrame, out_path: Path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-
     targets = ["squares", "powers", "subtraction", "division"]
+    conditions = ["none", "addition", "addition+multiplication"]
     fig, axes = plt.subplots(1, len(targets), figsize=(14, 4), sharey=True)
-    condition_order = ["none", "addition", "addition+multiplication"]
     for ax, target in zip(axes, targets):
-        x = np.arange(len(condition_order))
+        x = np.arange(len(conditions))
         width = 0.35
         for i, domain in enumerate(DOMAINS):
-            vals = []
-            for cond in condition_order:
-                row = history_summary[
-                    (history_summary["domain"] == domain)
-                    & (history_summary["target_task"] == target)
-                    & (history_summary["prior_history"] == cond)
-                ]
-                vals.append(row["acquisition_success_rate"].iloc[0] if len(row) else np.nan)
+            sub = summary[(summary["domain"] == domain) & (summary["target_task"] == target)].set_index("prior_history")
+            vals = [sub.loc[c, "acquisition_success_rate"] if c in sub.index else np.nan for c in conditions]
             ax.bar(x + (i - 0.5) * width, vals, width, label=domain)
         ax.set_xticks(x)
-        ax.set_xticklabels(condition_order, rotation=30, ha="right", fontsize=7)
+        ax.set_xticklabels(conditions, rotation=30, ha="right", fontsize=7)
         ax.set_title(target.capitalize())
         ax.set_ylim(0, 1.05)
-    axes[0].set_ylabel("Fixed-budget acquisition success rate")
+    axes[0].set_ylabel("Fixed-budget acquisition success rate (valid histories)")
     axes[-1].legend(fontsize=8, title="Domain")
-    fig.suptitle("Acquisition reliability by prior-skill history: non-negative vs. signed domain")
+    fig.suptitle("Acquisition reliability by prior-skill history")
     fig.tight_layout()
     fig.savefig(out_path, dpi=140)
     plt.close(fig)
 
 
-def make_compatibility_vs_speedup_plot(pairs_raw: pd.DataFrame, out_path: Path):
+def make_compatibility_vs_speedup_plot(raw: pd.DataFrame, out_path: Path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-
     fig, ax = plt.subplots(figsize=(7, 5))
-    markers = {"nonnegative": "o", "signed": "^"}
-    for domain in DOMAINS:
-        sub = pairs_raw[pairs_raw["domain"] == domain]
-        grouped = sub.groupby("pair").agg(
-            mean_score=("relatedness_score", "mean"), mean_speedup=("speedup", "mean")
-        )
-        ax.scatter(grouped["mean_score"], grouped["mean_speedup"], marker=markers[domain],
-                   s=80, label=domain)
+    for domain, marker in (("nonnegative", "o"), ("signed", "^")):
+        sub = raw[(raw["domain"] == domain) & raw["pair_valid"]]
+        grouped = sub.groupby("pair").agg(mean_score=("relatedness_score", "mean"), mean_speedup=("speedup", "mean"))
+        ax.scatter(grouped["mean_score"], grouped["mean_speedup"], marker=marker, s=80, label=domain)
         for pair, row in grouped.iterrows():
-            ax.annotate(f"{pair}\n({domain})", (row["mean_score"], row["mean_speedup"]),
-                        fontsize=6, textcoords="offset points", xytext=(5, 5))
-    ax.axhline(1.0, color="gray", linestyle="--", linewidth=1)
+            ax.annotate(f"{pair}\n({domain})", (row["mean_score"], row["mean_speedup"]), fontsize=6, xytext=(5, 5), textcoords="offset points")
+    ax.axhline(1.0, linestyle="--", linewidth=1)
     ax.set_xlabel("Mean frozen-parent compatibility score")
     ax.set_ylabel("Mean paired speedup")
     ax.set_title("Compatibility score vs. transfer speedup, by domain")
@@ -516,21 +486,21 @@ def make_compatibility_vs_speedup_plot(pairs_raw: pd.DataFrame, out_path: Path):
     plt.close(fig)
 
 
-def make_convergence_plot(pairs_raw: pd.DataFrame, out_path: Path):
+def make_convergence_plot(raw: pd.DataFrame, out_path: Path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-
     pairs = [f"{s}->{t}" for s, t, _ in PAIRS]
     fig, axes = plt.subplots(1, len(pairs), figsize=(16, 4), sharey=False)
     for ax, pair in zip(axes, pairs):
-        sub = pairs_raw[pairs_raw["pair"] == pair]
+        sub = raw[(raw["pair"] == pair) & raw["pair_valid"]]
         data, labels = [], []
         for domain in DOMAINS:
-            for col, name in [("clone_epochs", "clone"), ("scratch_epochs", "scratch")]:
-                data.append(sub[sub["domain"] == domain][col].values)
+            for col, name in (("clone_epochs", "clone"), ("scratch_epochs", "scratch")):
+                data.append(sub[sub["domain"] == domain][col].dropna().values)
                 labels.append(f"{domain}\n{name}")
-        ax.boxplot(data, tick_labels=labels)
+        if all(len(v) for v in data):
+            ax.boxplot(data, tick_labels=labels)
         ax.set_title(pair, fontsize=9)
         ax.tick_params(axis="x", labelsize=6)
     axes[0].set_ylabel("Epochs to 85% training accuracy")
@@ -551,7 +521,7 @@ def main():
     history_summary = summarize_history(history_raw)
 
     print("Running sign-specific diagnostics...")
-    sign_breakdown_raw = run_sign_breakdowns(pairs_raw)
+    sign_breakdown_raw = run_sign_breakdowns()
 
     out_dir = ROOT / "results"
     out_dir.mkdir(exist_ok=True)
@@ -561,26 +531,17 @@ def main():
     history_raw.to_csv(out_dir / "signed_domain_history.csv", index=False)
     history_summary.to_csv(out_dir / "signed_domain_history_summary.csv", index=False)
     sign_breakdown_raw.to_csv(out_dir / "signed_domain_sign_breakdown.csv", index=False)
-
     make_speedup_plot(pairs_summary, out_dir / "plot_signed_domain_speedup.png")
     make_success_rate_plot(history_summary, out_dir / "plot_signed_domain_success_rate.png")
     make_compatibility_vs_speedup_plot(pairs_raw, out_dir / "plot_signed_domain_compatibility_vs_speedup.png")
     make_convergence_plot(pairs_raw, out_dir / "plot_signed_domain_convergence.png")
 
-    print()
-    print("=== Pairs summary ===")
+    print("\n=== Pairs summary ===")
     print(pairs_summary.to_string(index=False))
-    print()
-    print("=== Domain comparison (paired by seed) ===")
+    print("\n=== Domain comparison (paired by seed) ===")
     print(pairs_domain_comparison.to_string(index=False))
-    print()
-    print("=== History summary ===")
+    print("\n=== History summary ===")
     print(history_summary.drop(columns=["std_adaptation_steps"]).to_string(index=False))
-    print()
-    print("=== Sign breakdown (aggregated preview) ===")
-    if len(sign_breakdown_raw):
-        print(sign_breakdown_raw.groupby(["pair", "quadrant"])[["mean_abs_error", "accuracy_tol_0.5"]]
-              .mean().to_string())
 
 
 if __name__ == "__main__":
