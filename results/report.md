@@ -62,9 +62,9 @@ Squares is near the training-budget limit in all three histories. Only 3/15 runs
 
 The controller's compatibility quantity is
 
-\[
+$$
 P(T\mid s_i) = \exp\left(-\frac{\operatorname{MSE}(s_i,T)}{60}\right).
-\]
+$$
 
 It is a frozen-probe heuristic: it measures how well skill `s_i` already predicts examples from target task `T`. A high value can justify reuse when the independent solve gate also passes, while an intermediate value can make cloning eligible. The score should not be interpreted as a probability calibrated in the statistical sense, nor as a guarantee that cloning will accelerate learning.
 
