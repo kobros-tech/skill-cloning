@@ -20,25 +20,24 @@ The paper should avoid claiming a universal prerequisite hierarchy, universal su
 - [x] Report matched-seed attrition in the signed-domain study.
 - [x] Keep retention framed as an isolation/invariance check rather than a general anti-forgetting claim.
 - [ ] Audit every number in the manuscript against the generated CSV/CI artifact.
-- [ ] Ensure historical results are visibly separated from authoritative results.
+- [x] Ensure historical results are visibly separated from authoritative results.
 
 ### P1 — Experimental strengthening
 
-Priority additions, in order:
-
-1. Add a matched irrelevant-parent control where feasible: scratch vs clone from a relevant parent vs clone from an unrelated parent.
-2. Report success rate separately from capped training cost.
-3. Where feasible, report conditional convergence cost among successful runs in addition to the budget-capped metric.
-4. Report held-out target performance alongside acquisition cost so speed does not substitute for quality.
-5. If compute permits, increase the number of seeds for the headline comparisons, especially signed-domain comparisons with only 5/15 valid matched seeds.
-6. Add a genuine shared-parameter interference baseline if we want to make an empirical catastrophic-forgetting comparison. Otherwise keep the current retention claim explicitly architectural.
+- [x] Add a matched irrelevant-parent control: scratch vs clone from a relevant parent vs clone from an unrelated parent.
+- [x] Report success rate separately from capped training cost in the existing experiments.
+- [x] Report held-out target performance alongside acquisition cost.
+- [x] Add paired seed-level statistics for the relevant/unrelated/scratch parent control.
+- [ ] Report confidence intervals/effect-size summaries for the new parent-control comparisons in the publication tables after the new CI artifact is generated.
+- [ ] Increase the number of seeds for headline comparisons, especially signed-domain comparisons with only 5/15 valid matched seeds, if compute permits.
+- [ ] Add a genuine shared-parameter interference baseline if we want to make an empirical catastrophic-forgetting comparison. Otherwise keep the current retention claim explicitly architectural.
 
 ### P2 — Scientific positioning
 
 - [ ] Add a proper Related Work section covering continual/lifelong learning, transfer learning, modular/parameter-isolated learning, and adaptation from prior skills.
-- [ ] Explain precisely what is new about the controlled skill-repository formulation and its experimental protocol.
-- [ ] Distinguish the controller's compatibility score from a causal measure of transferability.
-- [ ] State why the arithmetic environment is useful as a controlled testbed and what remains unknown outside it.
+- [x] Explain precisely what is new about the controlled skill-repository formulation and its experimental protocol in the claim/evidence ledger.
+- [x] Distinguish the controller's compatibility score from a causal measure of transferability.
+- [x] State why the arithmetic environment is useful as a controlled testbed and what remains unknown outside it.
 
 ### P3 — ICLR manuscript
 
@@ -46,7 +45,7 @@ Priority additions, in order:
 - [ ] Keep the main text within the 9-page limit.
 - [ ] Move detailed tables, additional diagnostics, and implementation details into supplementary material where appropriate.
 - [ ] Prepare anonymized author/title information for double-blind review.
-- [ ] Add an explicit limitations section.
+- [x] Add an explicit limitations section.
 - [ ] Add an AI-use statement as required by the venue.
 - [ ] Verify references, equations, captions, and statistical notation.
 
@@ -58,6 +57,10 @@ Priority additions, in order:
 - [ ] Add a concise reproducibility guide with expected runtime and hardware assumptions.
 - [ ] Record the exact commit/configuration corresponding to the paper's final numbers.
 - [ ] Add a final results manifest containing experiment name, seed count, configuration, and output files.
+
+## Current CI baseline
+
+Commit `2362d1a9643e53a546a8d71c3dc0615f0a95742a` completed the full experiment workflow successfully, including the unrelated-parent control, 27 regression tests, and the experiment artifact upload. Subsequent changes to this branch must preserve that green baseline.
 
 ## Submission freeze criteria
 
