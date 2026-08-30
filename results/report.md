@@ -9,10 +9,10 @@
 A dependency-free (numpy only) implementation of a controlled continual skill-acquisition mechanism:
 
 | Component | File | What it does |
-|---|---|---|
+| --- | --- | --- |
 | Skill representation | `skill.py` | `TinyMLP` (2→32→1, tanh hidden layer) trained by full-batch Adam; `clone()` deep-copies `W_j → W_new^(0)` per Section 5 |
 | Task family | `tasks.py` | Small-integer arithmetic regression tasks used by the experiments |
-| Compatibility score `P(T|s_i)` | `compatibility.py` | `exp(-MSE_i(T)/60)` evaluated on a 64-example probe batch, with no gradient step |
+| Compatibility score `P(T \| s_i)` | `compatibility.py` | `exp(-MSE_i(T)/60)` evaluated on a 64-example probe batch, with no gradient step |
 | Decision rule | `compatibility.py` | reuse / clone / scratch against thresholds `τ_solve=0.90`, `τ_clone=0.15` |
 | Three training strategies | `strategies.py` | **shared** (Baseline A: one network, no protection), **scratch** (Baseline B: independent network per task), **clone-and-adapt** (proposed mechanism) |
 | Experiment drivers | `experiment.py`, `experiments/relatedness_pairs.py` | Historical source→target comparison and current fixed-target prerequisite matrix |
@@ -29,10 +29,12 @@ A dependency-free (numpy only) implementation of a controlled continual skill-ac
 
 PR #4 changes the central question from ranking isolated source→target pairs to testing the same target under increasing amounts of previously acquired knowledge. Each condition uses 15 matched seeds and allows the controller to choose reuse, clone-and-adapt, or scratch.
 
+For non-empty histories, each requested prerequisite must be successfully acquired before the history is considered available to the target controller. Failed prerequisite acquisitions are recorded in the raw results, but unsuccessful skills are not exposed to the controller as acquired skills.
+
 ### 3.1 Results
 
 | Target | Prior history | Success | Mean budgeted acquisition steps | Held-out MSE |
-|---|---|---:|---:|---:|
+| --- | --- | ---: | ---: | ---: |
 | Subtraction | none | 15/15 | 33.5 | 0.153 |
 | Subtraction | addition | 15/15 | 62.3 | 0.141 |
 | Subtraction | addition + multiplication | 15/15 | 73.2 | 0.144 |
