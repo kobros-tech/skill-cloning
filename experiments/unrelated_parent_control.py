@@ -1,9 +1,11 @@
 """Matched control separating relevant transfer from generic pretraining.
 
-Only skills acquired before a target are eligible as parents. The controller-
-selected parent is compared with an unrelated earlier parent and scratch
-initialization. This is an exploratory control, not a replacement for the
-authoritative fixed-target experiment.
+Only skills acquired before a target are eligible as parents. The controller's
+highest-compatibility earlier skill is compared with an unrelated earlier
+skill and scratch initialization. If the controller itself selects scratch,
+there is still a well-defined highest-compatibility candidate for the control;
+this avoids treating ``None`` as a skill while preserving the distinction
+between compatibility ranking and the final controller action.
 """
 from __future__ import annotations
 
@@ -36,7 +38,8 @@ def run(n_seeds=N_SEEDS):
             if len(skills) >= 2:
                 X, y = sample_task(target, strat.N_TRAIN, seed=seed * 100 + step)
                 decision = comp.decide(skills, target, base_seed=seed * 100 + step)
-                relevant = decision["parent"]
+                ranking = decision["ranking"]
+                relevant = ranking[0][0]
                 unrelated = next(name for name in skills if name != relevant)
 
                 arms = {
@@ -50,6 +53,8 @@ def run(n_seeds=N_SEEDS):
                     rows.append({
                         "seed": seed,
                         "target": target,
+                        "controller_action": decision["action"],
+                        "controller_parent": decision["parent"],
                         "relevant_parent": relevant,
                         "unrelated_parent": unrelated,
                         "arm": arm,
