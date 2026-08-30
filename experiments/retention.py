@@ -1,10 +1,18 @@
-"""Sequential skill-retention mechanism check for Issue #3 / PR #5.
+"""Skill-isolation invariant check for Issue #3 / PR #5.
 
-This experiment verifies the isolation invariant of the independent-skill
-architecture. It is not an interference/forgetting experiment: once a skill
-is acquired, its network is not optimized again during later acquisitions.
-Therefore repeated evaluation of the same frozen network on the same retention
-set is expected to produce the same accuracy.
+This is NOT a statistical retention experiment. Under the current independent-
+skill architecture, a previously acquired Skill's network is not optimized
+again during later acquisitions. Each retention re-evaluation uses the same
+frozen network and the same deterministic skill-specific evaluation batch.
+Therefore a zero retention delta is expected by construction.
+
+What this check legitimately verifies is the implementation invariant: later
+acquisition must not mutate a supposedly frozen skill. The check is useful as
+a regression guard against accidental parameter leakage, but it is not
+empirical evidence that catastrophic forgetting is absent in architectures
+where interference is possible. A genuine empirical forgetting experiment
+would require an interference-risking baseline such as a shared-parameter
+architecture.
 """
 from __future__ import annotations
 
@@ -31,7 +39,8 @@ LR = 0.02
 MAX_EPOCHS = 1500
 ACC_TOL = 0.5
 ACC_TARGET = 0.85
-# Predeclared practical diagnostic tolerance: five percentage points.
+# Retained as a practical sanity bound. A violation indicates an isolation
+# implementation bug rather than an inferentially surprising observation.
 RETENTION_TOLERANCE = 0.05
 
 TASK_SEED_INDEX = {
@@ -174,11 +183,12 @@ def run_all_sequences(n_seeds: int = N_SEEDS):
 
 
 def summarize(raw: pd.DataFrame) -> pd.DataFrame:
-    """Summarize retention checks as mechanism diagnostics, not inferential tests."""
+    """Summarize invariant checks without inferential statistics."""
     retention = raw[raw["is_retention_check"]].copy()
     rows = []
     group_cols = ["sequence", "stage", "new_task", "evaluated_skill"]
     for group_key, group in retention.groupby(group_cols, sort=False):
+        values = group["retention_delta"].to_numpy(dtype=float)
         rows.append({
             "sequence": group_key[0],
             "stage": group_key[1],
@@ -188,7 +198,8 @@ def summarize(raw: pd.DataFrame) -> pd.DataFrame:
             "mean_pre_accuracy": group["pre_accuracy"].mean(),
             "mean_post_accuracy": group["post_accuracy"].mean(),
             "mean_retention_delta": group["retention_delta"].mean(),
-            "max_absolute_retention_delta": group["retention_delta"].abs().max(),
+            "max_absolute_retention_delta": float(np.max(np.abs(values))) if len(values) else np.nan,
+            "all_deltas_exactly_zero": bool(np.all(values == 0.0)) if len(values) else None,
             "retention_pass_rate": group["retention_pass"].mean(),
             "retention_tolerance": RETENTION_TOLERANCE,
             "new_skill_success_rate": group["new_skill_acquisition_success"].mean(),
@@ -205,16 +216,21 @@ def make_plot(summary: pd.DataFrame, out_path: Path):
         f"{r.sequence}\nstage {r.stage}: {r.evaluated_skill}"
         for r in summary.itertuples()
     ]
-    means = summary["mean_retention_delta"].to_numpy()
+    pre = summary["mean_pre_accuracy"].to_numpy()
+    post = summary["mean_post_accuracy"].to_numpy()
 
     fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(range(len(summary)), means, marker="o", linestyle="none")
-    ax.axhline(-RETENTION_TOLERANCE, linestyle="--", linewidth=1)
-    ax.axhline(0.0, linewidth=1)
-    ax.set_xticks(range(len(summary)))
+    x = range(len(summary))
+    ax.scatter(x, pre, marker="o", label="pre (baseline, at acquisition)", zorder=3)
+    ax.scatter(x, post, marker="x", label="post (re-evaluated after later acquisitions)", zorder=3)
+    ax.set_xticks(list(x))
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=7)
-    ax.set_ylabel("Accuracy change after new-skill acquisition")
-    ax.set_title("Retention mechanism checks")
+    ax.set_ylabel("Frozen-skill accuracy on its stable eval set")
+    ax.set_title(
+        "Skill-isolation invariant check: frozen-skill accuracy before vs.\n"
+        "after later acquisitions (identical points confirm isolation, not a statistical result)"
+    )
+    ax.legend(fontsize=8)
     fig.tight_layout()
     fig.savefig(out_path, dpi=140)
     plt.close(fig)
@@ -230,9 +246,10 @@ def main():
     summary.to_csv(out_dir / "retention_summary.csv", index=False)
     make_plot(summary, out_dir / "plot_retention.png")
 
-    print("Sequential skill retention / isolation mechanism check")
+    print("Skill-isolation invariant check (not a statistical retention experiment)")
+    print("Retention delta is expected to be exactly zero because stored skills are frozen")
     print(f"Seeds per sequence: {N_SEEDS}; sequences: {len(SEQUENCES)}")
-    print(f"Diagnostic tolerance: {RETENTION_TOLERANCE:.1%} absolute accuracy drop")
+    print(f"Sanity tolerance: {RETENTION_TOLERANCE:.1%} absolute accuracy drop")
     print()
     print(summary.to_string(index=False))
 
