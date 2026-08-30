@@ -60,21 +60,7 @@ def main():
     ))
     parts.append(render_table(
         "retention_summary.csv",
-        "Skill-isolation invariant check (frozen-skill accuracy before/after later "
-        "acquisitions -- an implementation check, not a statistical retention experiment; "
-        "see experiments/retention.py docstring)",
-    ))
-    parts.append(render_table(
-        "signed_domain_pairs_summary.csv",
-        "Signed-domain robustness: relatedness-pair speedup, non-negative vs. signed domain",
-    ))
-    parts.append(render_table(
-        "signed_domain_pairs_comparison.csv",
-        "Signed-domain robustness: paired domain comparison (per pair, paired by seed)",
-    ))
-    parts.append(render_table(
-        "signed_domain_history_summary.csv",
-        "Signed-domain robustness: prerequisite-history acquisition, non-negative vs. signed domain",
+        "Skill-isolation invariant check (frozen-skill accuracy before/after later acquisitions — implementation check, not a statistical retention experiment)",
     ))
 
     print("\n".join(p for p in parts if p))
