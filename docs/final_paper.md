@@ -41,7 +41,8 @@ Let the incoming target task be $T$ and let the repository contain previously ac
 For a target probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
 
 $$
-\mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}\left(f(x_j;\theta_i)-y_j\right)^2
+\mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}
+\left(f(x_j;\theta_i)-y_j\right)^2
 $$
 
 $$
@@ -55,7 +56,7 @@ Let $A(T,s_i)$ denote the independent target-solve accuracy used by the correcte
 $$
 \mathrm{action}(T,s_i)=
 \begin{cases}
-\mathrm{reuse} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{solve}} \text{ and } A(T,s_i)\geq 0.85,\\
+\mathrm{reuse} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{solve}} \text{ and } A(T,s_i)\geq0.85,\\
 \mathrm{clone} & \text{if } P(T\mid s_i)\geq\tau_{\mathrm{clone}} \text{ and the reuse condition is not satisfied},\\
 \mathrm{scratch} & \text{otherwise.}
 \end{cases}
@@ -70,7 +71,8 @@ $$
 For scratch learning, $\theta_T^{(0)}$ is independently initialized. The adapted parameters are then obtained by minimizing the target training loss, represented here by mean squared error:
 
 $$
-\theta_T^*=\arg\min_{\theta}\;\frac{1}{n}\sum_{j=1}^{n}\left(f(x_j;\theta)-y_j\right)^2.
+\theta_T^*=\arg\min_{\theta}\;\frac{1}{n}\sum_{j=1}^{n}
+\left(f(x_j;\theta)-y_j\right)^2.
 $$
 
 These equations define the mechanism evaluated in the experiments; they do not assume that a larger compatibility score must imply a larger transfer benefit.
@@ -104,18 +106,13 @@ $$
 Equivalently,
 
 $$
-\Delta\theta_i
-=
-\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}
-=0.
+\Delta\theta_i=\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}=0.
 $$
 
 The retention experiment evaluates the same stored skill on the same stable retention set before and after later acquisition. Its diagnostic accuracy change is:
 
 $$
-\Delta A_i
-=
-A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
+\Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
 $$
 
 The predeclared practical diagnostic criterion is:
@@ -235,9 +232,7 @@ For signed-domain comparisons, only seeds valid in both domains are included. Th
 The retention check is intentionally treated differently. Its primary diagnostic quantity is:
 
 $$
-\Delta A_i
-=
-A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
+\Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
 $$
 
 The practical diagnostic rule used by the experiment is:
