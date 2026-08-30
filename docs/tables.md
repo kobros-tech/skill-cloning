@@ -21,12 +21,12 @@ The expanded experiment holds the target fixed while varying the prior-skill his
 
 | Target | No prior skill | Addition only | Addition + Multiplication |
 |---|---:|---:|---:|
-| Subtraction | 33.5 budgeted steps | 62.3 budgeted steps | 73.2 budgeted steps |
-| Division | 515.2 budgeted steps | 616.2 budgeted steps | 617.5 budgeted steps |
+| Subtraction | 33.5 budgeted target-adaptation steps | 62.3 budgeted target-adaptation steps | 73.2 budgeted target-adaptation steps |
+| Division | 515.2 budgeted target-adaptation steps | 616.2 budgeted target-adaptation steps | 617.5 budgeted target-adaptation steps |
 | Squares | 20.0% success | 20.0% success | 13.3% success |
-| Powers | 471.6 budgeted steps | 355.2 budgeted steps | 237.3 budgeted steps |
+| Powers | 471.6 budgeted target-adaptation steps | 355.2 budgeted target-adaptation steps | 237.3 budgeted target-adaptation steps |
 
-For subtraction, division, and powers, the values are **mean budgeted acquisition steps across all 15 seeds**, with an unsuccessful run assigned the full 1500-step budget. They are therefore not mean convergence times among successful runs. Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
+For subtraction, division, and powers, the values are **mean budgeted target-adaptation steps across the valid 15-seed histories**, with an unsuccessful target acquisition assigned the full 1500-step target budget. They are therefore not mean convergence times among successful runs. If a requested prerequisite fails, that history is marked invalid and the failed prerequisite is never exposed to the controller; target metrics are not computed for that seed. Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
 
 The results show heterogeneous transfer: additional prior skills substantially help powers, while division exhibits negative transfer and squares remains difficult. These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
 
