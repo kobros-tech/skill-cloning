@@ -34,7 +34,7 @@ The corrected reuse gate prevents a merely related but unsolved skill from being
 
 ### 2.1 Mathematical formulation
 
-Let target task be \(T\) and an acquired skill be \(s_i\) with parameters \(\theta_i\). For a target probe set \(D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}\), frozen compatibility is:
+Let the target task be $T$ and an acquired skill be $s_i$ with parameters $\theta_i$. For a target probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, frozen compatibility is:
 
 $$
 \mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}
@@ -45,22 +45,27 @@ $$
 P(T\mid s_i)=\exp\left(-\frac{\mathrm{MSE}(T,s_i)}{60}\right).
 $$
 
-The score is computed without modifying the source network. Let \(A(T,s_i)\) be an independent target-solve accuracy. With \(\tau_{\mathrm{solve}}=0.90\), \(\tau_{\mathrm{clone}}=0.15\), and solve accuracy threshold 0.85:
+The score is computed without modifying the source network. Let $A(T,s_i)$ be an independent target-solve accuracy. With $\tau_{\mathrm{solve}}=0.90$, $\tau_{\mathrm{clone}}=0.15$, and solve accuracy threshold 0.85:
 
 $$
 \mathrm{action}(T,s_i)=
 \begin{cases}
-\mathrm{reuse} & P(T\mid s_i)\geq\tau_{\mathrm{solve}}\text{ and }A(T,s_i)\geq0.85,\\
-\mathrm{clone} & P(T\mid s_i)\geq\tau_{\mathrm{clone}}\text{ and reuse is not selected},\\
+\mathrm{reuse} & P(T\mid s_i)\geq\tau_{\mathrm{solve}}\ \text{and}\ A(T,s_i)\geq0.85,\\
+\mathrm{clone} & P(T\mid s_i)\geq\tau_{\mathrm{clone}}\ \text{and reuse is not selected},\\
 \mathrm{scratch} & \text{otherwise.}
 \end{cases}
 $$
 
-For cloning, \(\theta_T^{(0)}=\theta_i\); for scratch, the target starts from an independent initialization. Target training minimizes mean squared error.
+For cloning, $\theta_T^{(0)}=\theta_i$; for scratch, the target starts from an independent initialization. Target training minimizes mean squared error:
 
-### 2.2 Acquisition metric
+$$
+\theta_T^*=\arg\min_{\theta}\;\frac{1}{n}\sum_{j=1}^{n}
+\left(f(x_j;\theta)-y_j\right)^2.
+$$
 
-For a valid matched seed, the budget-capped training-cost ratio is:
+### 2.2 Acquisition metrics
+
+For a valid matched seed $r$, let $E_{\mathrm{scratch}}^{(r)}$ and $E_{\mathrm{clone}}^{(r)}$ denote the recorded training epochs for scratch and clone-and-adapt. The budget-capped training-cost ratio is:
 
 $$
 S^{(r)}=\frac{E_{\mathrm{scratch}}^{(r)}}{E_{\mathrm{clone}}^{(r)}}.
@@ -68,17 +73,47 @@ $$
 
 A value above 1 favors cloning. Training is capped at 1500 epochs. If an attempted target does not reach the acquisition criterion, its recorded epoch count is the full 1500-epoch budget. Consequently, this ratio is a **budget-capped training-cost comparison**, not a convergence-time comparison restricted to successful runs.
 
-Acquisition reliability is reported separately as the fraction reaching the declared criterion within the budget.
+Let $I_r=1$ when seed $r$ reaches the declared acquisition criterion within the budget and $I_r=0$ otherwise. The empirical acquisition success rate is:
+
+$$
+R=\frac{1}{N}\sum_{r=1}^{N}I_r.
+$$
 
 ### 2.3 Skill-isolation invariant
 
-For an acquired skill, let \(\theta_i^{\mathrm{pre}}\) and \(\theta_i^{\mathrm{post}}\) denote its stored parameters before and after later acquisition. The intended invariant is:
+For an acquired skill, let $\theta_i^{\mathrm{pre}}$ and $\theta_i^{\mathrm{post}}$ denote its stored parameters before and after later acquisition. The intended invariant is:
 
 $$
 \theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}}.
 $$
 
-The retention check evaluates the same frozen network on the same deterministic retention set before and after later acquisition. Therefore zero accuracy change is expected by construction. This verifies the implementation invariant; it does not constitute an empirical interference experiment.
+Equivalently, the parameter change is:
+
+$$
+\Delta\theta_i=\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}=0.
+$$
+
+The retention check evaluates the same frozen network on the same deterministic retention set before and after later acquisition. Its accuracy change is:
+
+$$
+\Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
+$$
+
+The practical diagnostic criterion is:
+
+$$
+\Delta A_i\geq-0.05.
+$$
+
+Because the stored parent network is not modified during later acquisition and the evaluation set is unchanged, zero accuracy change is expected by construction. This verifies the implementation invariant; it does not constitute an empirical interference experiment.
+
+### 2.4 Data separation
+
+The experiment separates target-training data, compatibility-probe data, solve/accuracy data, and held-out evaluation data. Held-out evaluation data are not used to choose controller thresholds, budgets, stopping rules, or model-selection decisions.
+
+### 2.5 Seeds
+
+Experiments use matched deterministic seeds. The main relatedness, signed-domain, and retention experiments use 15 seeds per nominal condition. Pairing by seed allows within-seed comparisons where both conditions yield valid observations.
 
 ## 3. Research design
 
@@ -142,7 +177,7 @@ The first two comparisons have only 5/15 valid matched seeds because signed-doma
 
 ### 4.5 Signed-domain prerequisite reliability
 
-The signed fixed-target experiment also reveals prerequisite attrition. Examples include 7/15 invalid histories for subtraction after addition + multiplication, 9/15 invalid histories for division after addition + multiplication, 3/15 invalid histories for squares after addition + multiplication, and 5/15 invalid histories for powers after addition + multiplication. These invalid histories are fail-closed: the failed prerequisite is not exposed to the controller and the target is not attempted.
+The signed fixed-target experiment also reveals prerequisite attrition. Invalid histories are fail-closed: the failed prerequisite is not exposed to the controller and the target is not attempted.
 
 Signed-domain squares has 0/15 target successes for all three tested histories. This establishes failure within the declared 1500-epoch budget for this protocol; it does not establish impossibility of learning signed squares in general.
 
