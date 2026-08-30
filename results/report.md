@@ -4,6 +4,28 @@
 
 > **Historical-controller note (PR #1/#2):** The original source→target run used a compatibility controller that has since been fixed. Independent review found that `τ_solve=0.90` alone could let the controller call a merely-related-but-unsolved task "reuse" (zero training). PR #2 fixed this by requiring an independently measured solve check. The old powers result (clone-and-adapt held-out MSE ≈ 3.71) therefore **must not be treated as a current result**. Against the fixed controller, the original curriculum's powers clone-and-adapt held-out MSE was **0.206 ± 0.076**, versus **0.227** for scratch. The historical narrative that cloning was fast but generalized worse was an artifact of the false-reuse bug and is preserved only in the historical section below.
 
+> **Update (post PR #1/#2, current as of PR #3):** §3.1 and §3.3 below describe
+> the *original* run, made against a compatibility controller that has since
+> been fixed. Independent review found that `τ_solve=0.90` alone was letting
+> the controller call a merely-related-but-unsolved task "reuse" (zero
+> training) — for the powers task specifically, this fired on 9 of 15 seeds,
+> using the raw multiplication network on powers with no adaptation at all
+> (real held-out MSE ≈ 6, far from solved). PR #2 fixed this by gating `reuse`
+> on an independently measured accuracy check, not just the frozen-probe
+> score. **Re-running the original curriculum against the current, fixed
+> controller changes the headline powers number:** clone-and-adapt's final
+> held-out MSE on powers is now **0.206 ± 0.076** (was 3.71 ± 3.10), which is
+> now *on par with* independent scratch (0.227), not five times worse. The
+> §3.3 "mixed result" — fast convergence but worse generalization — **no
+> longer reproduces** against the current codebase; it was an artifact of the
+> false-reuse bug, not a real property of cloning. The rest of this document
+> is left as the original write-up (a snapshot of what the original,
+> now-fixed controller produced) for the historical record; treat §3.3's
+> narrative as superseded by this note, and see PR #2's description /
+> `results/compatibility_calibration_summary.csv` for the fix details. §3.1's
+> retention conclusion (shared network forgets catastrophically, clone-and-adapt
+> does not) is unaffected and still holds.
+
 ## 1. What was built
 
 A dependency-free (numpy only) implementation of a controlled continual skill-acquisition mechanism:
