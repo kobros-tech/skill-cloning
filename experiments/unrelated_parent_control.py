@@ -6,12 +6,17 @@ skill and scratch initialization. If the controller itself selects scratch,
 there is still a well-defined highest-compatibility candidate for the control;
 this avoids treating ``None`` as a skill while preserving the distinction
 between compatibility ranking and the final controller action.
+
+The experiment reports both descriptive arm summaries and paired seed-level
+comparisons. The latter are the appropriate inferential unit because all three
+arms use the same target, seed, data, and training budget within a comparison.
 """
 from __future__ import annotations
 
 import os
 import sys
 import pandas as pd
+from scipy import stats
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -27,6 +32,44 @@ N_SEEDS = 15
 def train(net, X, y):
     _, steps = strat._train_track_accuracy(net, X, y, strat.EPOCHS, strat.LR, strat.ACC_TARGET)
     return steps
+
+
+def paired_summary(out: pd.DataFrame) -> pd.DataFrame:
+    """Compute matched-seed statistics for relevant/unrelated/scratch arms.
+
+    The test unit is a seed within a target. We report the mean paired
+    difference, standard deviation, paired t-test, and Wilcoxon signed-rank
+    test. No significance claim is hard-coded into the experiment.
+    """
+    rows = []
+    for target, group in out.groupby("target"):
+        wide = group.pivot(index="seed", columns="arm", values="convergence_steps").dropna()
+        for left, right, label in [
+            ("relevant_clone", "scratch", "relevant_minus_scratch"),
+            ("relevant_clone", "unrelated_clone", "relevant_minus_unrelated"),
+            ("unrelated_clone", "scratch", "unrelated_minus_scratch"),
+        ]:
+            if wide.empty:
+                continue
+            diff = wide[left] - wide[right]
+            t_stat, t_p = stats.ttest_rel(wide[left], wide[right])
+            if (diff != 0).any():
+                w_stat, w_p = stats.wilcoxon(wide[left], wide[right], alternative="two-sided")
+            else:
+                w_stat, w_p = 0.0, 1.0
+            rows.append({
+                "target": target,
+                "comparison": label,
+                "n_matched": int(len(diff)),
+                "mean_difference_steps": float(diff.mean()),
+                "std_difference_steps": float(diff.std(ddof=1)) if len(diff) > 1 else 0.0,
+                "mean_absolute_difference_steps": float(diff.abs().mean()),
+                "paired_t_stat": float(t_stat),
+                "paired_t_p": float(t_p),
+                "wilcoxon_stat": float(w_stat),
+                "wilcoxon_p": float(w_p),
+            })
+    return pd.DataFrame(rows)
 
 
 def run(n_seeds=N_SEEDS):
@@ -77,5 +120,11 @@ if __name__ == "__main__":
     out = run()
     path = os.path.join(ROOT, "results", "unrelated_parent_control.csv")
     out.to_csv(path, index=False)
-    print(out.groupby(["target", "arm"])["convergence_steps"].agg(["mean", "count"]))
+    summary = paired_summary(out)
+    summary_path = os.path.join(ROOT, "results", "unrelated_parent_control_stats.csv")
+    summary.to_csv(summary_path, index=False)
+    print(out.groupby(["target", "arm"])["convergence_steps"].agg(["mean", "std", "count"]))
+    print("\nPaired comparisons:")
+    print(summary.to_string(index=False))
     print(f"Saved {path}")
+    print(f"Saved {summary_path}")
