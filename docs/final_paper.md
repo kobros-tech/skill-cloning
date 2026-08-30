@@ -4,7 +4,7 @@
 
 This study evaluates a small reproducible framework for continual skill acquisition in which an incoming task can reuse an already-solved skill, clone a related skill and adapt it, or learn from scratch. The experiments use small arithmetic regression tasks and matched deterministic seeds to separate acquisition reliability, transfer efficiency, domain sensitivity, and the preservation of previously acquired skills.
 
-The central result is that prior knowledge is not uniformly beneficial: transfer depends on the source-target relationship and on the input distribution. The authoritative fixed-target experiment shows heterogeneous transfer: powers benefit from additional prior history, division exhibits negative transfer, and squares remains difficult. A signed-domain follow-up further shows distribution sensitivity. On the valid matched seeds, multiplication → powers changes from 2.217× to 0.703× and reverses direction (`p=0.00168`); multiplication → squares changes from 1.265× to 1.031× without a conventionally significant domain difference (`p=0.0757`); addition → subtraction changes from 0.408× to 1.001× (`p≈1.88×10⁻⁷`); and the addition → multiplication null control changes from 1.145× to 1.176× with no statistically detectable domain difference (`p=0.591`). The powers and squares signed-domain comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds.
+The central result is that prior knowledge is not uniformly beneficial: transfer depends on the source-target relationship and on the input distribution. The authoritative fixed-target experiment shows heterogeneous transfer: powers benefit from additional prior history, division exhibits negative transfer, and squares remains difficult. A signed-domain follow-up further shows distribution sensitivity. On the valid matched seeds, multiplication $\rightarrow$ powers changes from $2.217\times$ to $0.703\times$ and reverses direction ($p=0.00168$); multiplication $\rightarrow$ squares changes from $1.265\times$ to $1.031\times$ without a conventionally significant domain difference ($p=0.0757$); addition $\rightarrow$ subtraction changes from $0.408\times$ to $1.001\times$ ($p\approx1.88\times10^{-7}$); and the addition $\rightarrow$ multiplication null control changes from $1.145\times$ to $1.176\times$ with no statistically detectable domain difference ($p=0.591$). The powers and squares signed-domain comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds.
 
 A separate skill-isolation check confirms that stored parent parameters are unchanged during later acquisitions. This is an implementation invariant of the current architecture, not a statistical demonstration that catastrophic forgetting is absent.
 
@@ -133,7 +133,7 @@ The comparison therefore tests domain/distribution sensitivity rather than isola
 
 ### 4.1 Historical relatedness results
 
-The earlier source-target analysis remains useful as historical context: multiplication → powers was approximately 2.31×, multiplication → squares approximately 1.26×, addition → subtraction approximately 0.33×, and addition → multiplication approximately 1.12×. These are historical relatedness results and are not mixed with the authoritative fixed-target matrix.
+The earlier source-target analysis remains useful as historical context: multiplication $\rightarrow$ powers was approximately $2.31\times$, multiplication $\rightarrow$ squares approximately $1.26\times$, addition $\rightarrow$ subtraction approximately $0.33\times$, and addition $\rightarrow$ multiplication approximately $1.12\times$. These are historical relatedness results and are not mixed with the authoritative fixed-target matrix.
 
 ### 4.2 Authoritative fixed-target results
 
@@ -158,22 +158,22 @@ A genuine empirical forgetting experiment would require an at-risk baseline, suc
 
 The current CI artifact gives the following paired domain comparisons. Pairing is performed only for seeds that have a valid source acquisition in both domains.
 
-| Pair | Valid matched seeds | Non-negative | Signed | Difference (non-negative − signed) | Paired p |
+| Pair | Valid matched seeds | Non-negative | Signed | Difference (non-negative $-$ signed) | Paired $p$ |
 |---|---:|---:|---:|---:|---:|
-| multiplication → powers | 5/15 | 2.217 ± 0.530 | 0.703 ± 0.141 | 1.514 ± 0.451 | 0.00168 |
-| multiplication → squares | 5/15 | 1.265 ± 0.178 | 1.031 ± 0.069 | 0.235 ± 0.220 | 0.0757 |
-| addition → subtraction | 15/15 | 0.408 ± 0.100 | 1.001 ± 0.224 | −0.594 ± 0.243 | 1.88×10⁻⁷ |
-| addition → multiplication (null control) | 15/15 | 1.145 ± 0.138 | 1.176 ± 0.128 | −0.031 ± 0.218 | 0.591 |
+| multiplication $\rightarrow$ powers | 5/15 | $2.217\pm0.530$ | $0.703\pm0.141$ | $1.514\pm0.451$ | 0.00168 |
+| multiplication $\rightarrow$ squares | 5/15 | $1.265\pm0.178$ | $1.031\pm0.069$ | $0.235\pm0.220$ | 0.0757 |
+| addition $\rightarrow$ subtraction | 15/15 | $0.408\pm0.100$ | $1.001\pm0.224$ | $-0.594\pm0.243$ | $1.88\times10^{-7}$ |
+| addition $\rightarrow$ multiplication (null control) | 15/15 | $1.145\pm0.138$ | $1.176\pm0.128$ | $-0.031\pm0.218$ | 0.591 |
 
 The first two comparisons have only 5/15 valid matched seeds because signed-domain multiplication acquisition fails in 10 seeds. Those failures are explicitly reported and are not converted into artificial speedup observations.
 
-**Multiplication → powers reverses direction.** The paired mean changes from 2.217× to 0.703× and the domain comparison is statistically different (`p=0.00168`). Sign-specific diagnostics show substantially higher error on negative-base odd-exponent cases. This is consistent with a harder sub-problem under the signed distribution, but does not prove the mechanism causally.
+**Multiplication $\rightarrow$ powers reverses direction.** The paired mean changes from $2.217\times$ to $0.703\times$ and the domain comparison is statistically different ($p=0.00168$). Sign-specific diagnostics show substantially higher error on negative-base odd-exponent cases. This is consistent with a harder sub-problem under the signed distribution, but does not prove the mechanism causally.
 
-**Multiplication → squares moves toward no effect.** The paired mean changes from 1.265× to 1.031×. The paired comparison is not conventionally statistically significant (`p=0.0757`), so the appropriate conclusion is erosion toward no effect rather than a demonstrated significant domain difference.
+**Multiplication $\rightarrow$ squares moves toward no effect.** The paired mean changes from $1.265\times$ to $1.031\times$. The paired comparison is not conventionally statistically significant ($p=0.0757$), so the appropriate conclusion is erosion toward no effect rather than a demonstrated significant domain difference.
 
-**Addition → subtraction neutralizes.** Negative transfer in the non-negative domain (0.408×) becomes approximately neutral in the signed domain (1.001×), with all 15 seeds valid.
+**Addition $\rightarrow$ subtraction neutralizes.** Negative transfer in the non-negative domain ($0.408\times$) becomes approximately neutral in the signed domain ($1.001\times$), with all 15 seeds valid.
 
-**Addition → multiplication remains a null control.** The ratio changes from 1.145× to 1.176×, with no statistically detectable domain difference (`p=0.591`). This does not prove equivalence; it means the tested paired comparison did not detect a statistically significant domain effect.
+**Addition $\rightarrow$ multiplication remains a null control.** The ratio changes from $1.145\times$ to $1.176\times$, with no statistically detectable domain difference ($p=0.591$). This does not prove equivalence; it means the tested paired comparison did not detect a statistically significant domain effect.
 
 ### 4.5 Signed-domain prerequisite reliability
 
@@ -183,13 +183,13 @@ Signed-domain squares has 0/15 target successes for all three tested histories. 
 
 ### 4.6 Compatibility sensitivity
 
-The controller's input is itself distribution-sensitive. For division with an addition parent, the frozen compatibility score is approximately 0.28–0.31 in the non-negative domain and approximately 0.03–0.06 in the signed domain. The non-negative values exceed the clone threshold while the signed values are below it, so controller behavior shifts toward scratch under the signed configuration.
+The controller's input is itself distribution-sensitive. For division with an addition parent, the frozen compatibility score is approximately 0.28--0.31 in the non-negative domain and approximately 0.03--0.06 in the signed domain. The non-negative values exceed the clone threshold while the signed values are below it, so controller behavior shifts toward scratch under the signed configuration.
 
 ## 5. Statistical interpretation
 
 Paired comparisons use the matched seed as the unit of analysis. For signed-domain comparisons, only seeds valid in both domains are included. This is essential because prerequisite acquisition failure changes the estimand: a failed source does not provide a valid clone-versus-scratch transfer comparison.
 
-The signed-domain paired t-tests therefore describe changes in the budget-capped training-cost ratio among valid matched source acquisitions. They do not include the 10 multiplication-prerequisite failures in the powers and squares paired tests.
+The signed-domain paired $t$-tests therefore describe changes in the budget-capped training-cost ratio among valid matched source acquisitions. They do not include the 10 multiplication-prerequisite failures in the powers and squares paired tests.
 
 The retention check is intentionally not analyzed with confidence intervals or effect sizes. Its zero delta is a direct consequence of evaluating an unchanged stored network on an unchanged evaluation set.
 
@@ -218,7 +218,7 @@ The non-negative configuration remains the default. Signed-domain behavior is an
 
 The experiments support a conservative conclusion: continual skill acquisition benefits from retaining multiple acquisition routes rather than assuming that previous knowledge is always useful. Prior knowledge can accelerate some targets, slow others, and fail to help difficult targets. The usefulness of a cloned representation is therefore source-, target-, and distribution-dependent.
 
-The signed-domain follow-up strengthens this conclusion. Multiplication → powers reverses from positive to negative transfer, multiplication → squares moves toward no effect without a statistically significant paired domain difference, and addition → subtraction's negative transfer neutralizes. The addition → multiplication null control shows no statistically detectable domain difference. These findings are conditional on the tested arithmetic task family and domain expansion.
+The signed-domain follow-up strengthens this conclusion. Multiplication $\rightarrow$ powers reverses from positive to negative transfer, multiplication $\rightarrow$ squares moves toward no effect without a statistically significant paired domain difference, and addition $\rightarrow$ subtraction's negative transfer neutralizes. The addition $\rightarrow$ multiplication null control shows no statistically detectable domain difference. These findings are conditional on the tested arithmetic task family and domain expansion.
 
 The independent skill-storage architecture also provides a clear implementation-level isolation guarantee: later acquisition does not modify stored parent parameters. This is a useful architectural property, but it should not be confused with an empirical demonstration of resistance to catastrophic forgetting under interference-capable learning.
 
@@ -238,4 +238,3 @@ Future work should therefore combine the present transfer and domain-sensitivity
 * [x] CI runs the full experiment suite and regression tests.
 * [x] Generated artifacts are uploaded by CI.
 * [ ] At-risk empirical retention baseline remains future work.
-* [ ] Broader task families and larger models remain future work.
