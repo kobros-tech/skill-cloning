@@ -4,14 +4,14 @@ These tables are intended as the compact statistical presentation for the final 
 
 ## Table 1 — Relatedness-pair acquisition
 
-| Source → target | Mean frozen compatibility | Mean paired speedup (scratch / clone) | Paired p-value | Interpretation |
+| Source $\rightarrow$ target | Mean frozen compatibility | Mean paired speedup (scratch / clone) | Paired $p$-value | Interpretation |
 |---|---:|---:|---:|---|
-| Multiplication → Squares | 0.001 | 1.26× | 3.9×10⁻⁹ | Positive transfer despite low frozen-output score |
-| Multiplication → Powers | 0.915 | 2.31× | 6.0×10⁻¹¹ | Strong positive transfer |
-| Addition → Subtraction | 0.156 | 0.33× | 2.3×10⁻¹² | Negative transfer |
-| Addition → Multiplication | 0.005 | 1.12× | 0.013 | Small positive control effect |
+| Multiplication $\rightarrow$ Squares | 0.001 | $1.26\times$ | $3.9\times10^{-9}$ | Positive transfer despite low frozen-output score |
+| Multiplication $\rightarrow$ Powers | 0.915 | $2.31\times$ | $6.0\times10^{-11}$ | Strong positive transfer |
+| Addition $\rightarrow$ Subtraction | 0.156 | $0.33\times$ | $2.3\times10^{-12}$ | Negative transfer |
+| Addition $\rightarrow$ Multiplication | 0.005 | $1.12\times$ | 0.013 | Small positive control effect |
 
-**Historical-result note:** Table 1 summarizes the earlier source→target analysis. The pre-fix Powers generalization result associated with the false-reuse controller is superseded and is not represented by this table's speedup statistic.
+**Historical-result note:** Table 1 summarizes the earlier source$\rightarrow$target analysis. The pre-fix Powers generalization result associated with the false-reuse controller is superseded and is not represented by this table's speedup statistic.
 
 The table demonstrates why compatibility score should not be interpreted as a complete predictor of transfer usefulness.
 
@@ -40,10 +40,10 @@ The results show heterogeneous transfer: additional prior skills substantially h
 | Sequences | Representative 3-skill arithmetic sequences | 4 |
 | Evaluation set | Stable, skill-specific held-out set | 300 examples / check |
 | Practical retention tolerance | Maximum diagnostic accuracy loss | 5 percentage points |
-| Repeated-check mean delta | Post accuracy − pre accuracy | 0.0000 in reported checks |
-| Maximum absolute accuracy change | max(|post accuracy − pre accuracy|) across all checks | 0.0 |
+| Repeated-check mean delta | Post accuracy $-$ pre accuracy | 0.0000 in reported checks |
+| Maximum absolute accuracy change | $\max(|\text{post accuracy}-\text{pre accuracy}|)$ across all checks | 0.0 |
 | All deltas exactly zero | Whether every check landed at exactly 0.0 | True |
-| Retention pass rate | Fraction with delta ≥ −0.05 | 100% |
+| Retention pass rate | Fraction with delta $\geq-0.05$ | 100% |
 
 **Interpretation:** these zero-change checks are consistent with the isolated-skill invariant: the stored parent network is not modified during later skill acquisition, and the same network is evaluated on the same retention set. They are therefore an **implementation/mechanism check, not a statistical demonstration that the system is robust to catastrophic forgetting**.
 
@@ -57,16 +57,16 @@ The signed-domain follow-up compares the original non-negative operand domain wi
 
 Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size. Runs that fail to reach the target criterion contribute the declared 1500-epoch cap to the epoch ratio; therefore these ratios are budget-capped training-cost comparisons rather than convergence-time comparisons restricted to successful runs.
 
-| Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative − signed) | Paired t-test p | Direction reversed? |
+| Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative $-$ signed) | Paired $t$-test $p$ | Direction reversed? |
 |---|---:|---:|---:|---:|---:|---|
-| multiplication → powers | 5/15 | 2.217 ± 0.530 | 0.703 ± 0.141 | 1.514 ± 0.451 | 0.00168 | **Yes** |
-| multiplication → squares | 5/15 | 1.265 ± 0.178 | 1.031 ± 0.069 | 0.235 ± 0.220 | 0.0757 | No — erodes toward null |
-| addition → subtraction | 15/15 | 0.408 ± 0.100 | 1.001 ± 0.224 | −0.594 ± 0.243 | 1.88×10⁻⁷ | Yes — negative transfer neutralizes |
-| addition → multiplication (null control) | 15/15 | 1.145 ± 0.138 | 1.176 ± 0.128 | −0.031 ± 0.218 | 0.591 | No |
+| multiplication $\rightarrow$ powers | 5/15 | $2.217\pm0.530$ | $0.703\pm0.141$ | $1.514\pm0.451$ | 0.00168 | **Yes** |
+| multiplication $\rightarrow$ squares | 5/15 | $1.265\pm0.178$ | $1.031\pm0.069$ | $0.235\pm0.220$ | 0.0757 | No — erodes toward null |
+| addition $\rightarrow$ subtraction | 15/15 | $0.408\pm0.100$ | $1.001\pm0.224$ | $-0.594\pm0.243$ | $1.88\times10^{-7}$ | Yes — negative transfer neutralizes |
+| addition $\rightarrow$ multiplication (null control) | 15/15 | $1.145\pm0.138$ | $1.176\pm0.128$ | $-0.031\pm0.218$ | 0.591 | No |
 
 The powers and squares comparisons have only **5/15 valid matched seeds** because the signed-domain multiplication prerequisite failed acquisition in 10 seeds. The 10 failed seeds are not silently treated as zero or full-budget source-acquisition speedups and are excluded from the paired speedup test. This attrition is itself reported as part of the signed-domain result.
 
-The multiplication → powers comparison remains statistically different under the paired test (`p=0.00168`) and reverses direction. For multiplication → squares, the current paired comparison is **not conventionally statistically significant** (`p=0.0757`); the appropriate conclusion is that the observed positive transfer erodes toward no effect, not that a statistically significant domain difference has been established.
+The multiplication $\rightarrow$ powers comparison remains statistically different under the paired test ($p=0.00168$) and reverses direction. For multiplication $\rightarrow$ squares, the current paired comparison is **not conventionally statistically significant** ($p=0.0757$); the appropriate conclusion is that the observed positive transfer erodes toward no effect, not that a statistically significant domain difference has been established.
 
 ### Acquisition success rate
 
@@ -78,26 +78,26 @@ Subtraction, division, and powers remain at 100% target-acquisition success in t
 
 Division's frozen compatibility score against an addition parent changes substantially with the domain:
 
-* **Non-negative domain:** approximately 0.28–0.31, above `τ_clone = 0.15`; the controller chooses clone in 15/15 seeds.
-* **Signed domain:** approximately 0.03–0.06, below `τ_clone`; the controller switches toward scratch in 14–15/15 seeds.
+* **Non-negative domain:** approximately 0.28--0.31, above $\tau_{\mathrm{clone}}=0.15$; the controller chooses clone in 15/15 seeds.
+* **Signed domain:** approximately 0.03--0.06, below $\tau_{\mathrm{clone}}$; the controller switches toward scratch in 14--15/15 seeds.
 
 Thus, the controller's own decision inputs are domain-sensitive, not only the resulting transfer outcome.
 
 ### Sign-specific diagnostic breakdown
 
-The following diagnostics are from the signed-domain trained clone network, evaluated on held-out examples at ±0.5 tolerance.
+The following diagnostics are from the signed-domain trained clone network, evaluated on held-out examples at $\pm0.5$ tolerance.
 
 | Pair | Quadrant | Mean absolute error | Accuracy |
 |---|---|---:|---:|
-| multiplication → powers | positive base | 0.230 | 93.2% |
-| multiplication → powers | negative base, even exponent | 0.410 | 75.4% |
-| multiplication → powers | negative base, odd exponent | 0.890 | 67.0% |
-| multiplication → squares | positive base | 0.486 | 67.4% |
-| multiplication → squares | negative base | 0.489 | 69.7% |
-| addition → subtraction | same-sign, (+,+) | 0.220 | 94.9% |
-| addition → subtraction | same-sign, (-,-) | 0.206 | 96.7% |
-| addition → subtraction | mixed-sign, (+,-) | 0.455 | 70.6% |
-| addition → subtraction | mixed-sign, (-,+) | 0.458 | 71.0% |
+| multiplication $\rightarrow$ powers | positive base | 0.230 | 93.2% |
+| multiplication $\rightarrow$ powers | negative base, even exponent | 0.410 | 75.4% |
+| multiplication $\rightarrow$ powers | negative base, odd exponent | 0.890 | 67.0% |
+| multiplication $\rightarrow$ squares | positive base | 0.486 | 67.4% |
+| multiplication $\rightarrow$ squares | negative base | 0.489 | 69.7% |
+| addition $\rightarrow$ subtraction | same-sign, $(+,+)$ | 0.220 | 94.9% |
+| addition $\rightarrow$ subtraction | same-sign, $(-,-)$ | 0.206 | 96.7% |
+| addition $\rightarrow$ subtraction | mixed-sign, $(+,-)$ | 0.455 | 70.6% |
+| addition $\rightarrow$ subtraction | mixed-sign, $(-,+)$ | 0.458 | 71.0% |
 
 These breakdowns are **diagnostic, not causal proof**. They show patterns consistent with the observed domain effects rather than establishing the mechanism definitively.
 
