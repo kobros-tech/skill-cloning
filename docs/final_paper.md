@@ -206,19 +206,21 @@ The signed-domain experiment compares the original non-negative configuration wi
 
 ## 4. Results
 
-### 4.1 Acquisition reliability
+### 4.1 Fixed-target acquisition
 
-The fixed-target matrix shows that acquisition reliability depends strongly on the target and on the available prior history. Powers benefit from additional prior history under the authoritative fixed-target design, while division exhibits negative transfer and squares remains difficult. These results support heterogeneous transfer rather than a monotonic benefit from accumulating more skills.
+The **fixed-target prerequisite matrix is the primary quantitative result**. Holding the target fixed while varying prior-skill history shows that the effect of additional prior knowledge is target-dependent rather than monotonic. Powers benefit from additional prior history under the authoritative fixed-target design, while division exhibits negative transfer and squares remains difficult. These results support heterogeneous transfer: accumulating more skills does not guarantee faster or more reliable acquisition.
+
+Acquisition reliability and acquisition efficiency should be distinguished. The matrix first determines whether a target can be acquired within the declared budget; only then are matched training-cost comparisons interpreted. This distinction is especially important for difficult targets such as squares, where failures cannot be treated as ordinary successful convergence observations.
 
 ### 4.2 Parent identity
 
-The matched three-arm parent-control experiment provides direct evidence that parent identity matters beyond generic pretraining. For multiplication, the relevant clone reaches the criterion 117.2 steps earlier than scratch on average and 298.3 steps earlier than the unrelated parent; the unrelated parent is itself 181.1 steps slower than scratch. For powers, the relevant clone is 260.5 steps faster than scratch and 125.9 steps faster than the unrelated parent, while the unrelated parent is 134.7 steps faster than scratch. Holm-adjusted paired tests support all six reported contrasts under the declared correction procedure.
+The matched three-arm parent-control experiment provides the strongest direct test of whether transfer depends on **which** prior skill is used, rather than merely on whether the model was pretrained. For multiplication, the relevant clone reaches the criterion 117.2 steps earlier than scratch on average and 298.3 steps earlier than the unrelated parent; the unrelated parent is itself 181.1 steps slower than scratch. For powers, the relevant clone is 260.5 steps faster than scratch and 125.9 steps faster than the unrelated parent, while the unrelated parent is 134.7 steps faster than scratch. Holm-adjusted paired tests support all six reported contrasts under the declared correction procedure.
 
 The pattern is important because it is not consistent with a simple rule that "pretraining helps." The unrelated parent hurts multiplication but helps powers, while the relevant parent outperforms both baselines for both targets. Under this protocol, the source skill therefore contains information about transfer that is not captured by the generic fact that it was pretrained.
 
 ### 4.3 Domain sensitivity
 
-The signed-domain follow-up shows that transfer can change when the input distribution changes. On the valid matched seeds, multiplication $\rightarrow$ powers changes from $2.217\times$ to $0.703\times$ and reverses direction ($p=0.00168$). Multiplication $\rightarrow$ squares changes from $1.265\times$ to $1.031\times$ without a conventionally significant domain difference ($p=0.0757$). Addition $\rightarrow$ subtraction changes from $0.408\times$ to $1.001\times$ ($p\approx1.88\times10^{-7}$), while the addition $\rightarrow$ multiplication null control changes from $1.145\times$ to $1.176\times$ with no statistically detectable domain difference ($p=0.591$).
+The signed-domain follow-up tests whether these transfer relationships remain stable when the input distribution changes. On the valid matched seeds, multiplication $\rightarrow$ powers changes from $2.217\times$ to $0.703\times$ and reverses direction ($p=0.00168$). Multiplication $\rightarrow$ squares changes from $1.265\times$ to $1.031\times$ without a conventionally significant domain difference ($p=0.0757$). Addition $\rightarrow$ subtraction changes from $0.408\times$ to $1.001\times$ ($p\approx1.88\times10^{-7}$), while the addition $\rightarrow$ multiplication null control changes from $1.145\times$ to $1.176\times$ with no statistically detectable domain difference ($p=0.591$).
 
 The powers and squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. These results are therefore interpreted as limited domain-sensitivity evidence rather than as high-powered general conclusions.
 
