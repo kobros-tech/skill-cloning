@@ -38,6 +38,9 @@ jobs:
       - name: Run signed-domain transfer-robustness experiment
         run: python experiments/signed_domain_transfer.py
 
+      - name: Run unrelated-parent transfer control
+        run: python experiments/unrelated_parent_control.py
+
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
 
