@@ -1,0 +1,13 @@
+sequence,stage,new_task,evaluated_skill,n_runs,mean_pre_accuracy,mean_post_accuracy,mean_retention_delta,max_absolute_retention_delta,all_deltas_exactly_zero,retention_pass_rate,retention_tolerance,new_skill_success_rate
+addition→multiplication→division,1,multiplication,addition,15,0.8391111111111109,0.8391111111111109,0.0,0.0,True,1.0,0.05,0.9333333333333333
+addition→multiplication→division,2,division,addition,15,0.8391111111111109,0.8391111111111109,0.0,0.0,True,1.0,0.05,1.0
+addition→multiplication→division,2,division,multiplication,14,0.8138095238095238,0.8138095238095238,0.0,0.0,True,1.0,0.05,1.0
+addition→multiplication→squares,1,multiplication,addition,15,0.8351111111111111,0.8351111111111111,0.0,0.0,True,1.0,0.05,1.0
+addition→multiplication→squares,2,squares,addition,15,0.8351111111111111,0.8351111111111111,0.0,0.0,True,1.0,0.05,0.13333333333333333
+addition→multiplication→squares,2,squares,multiplication,15,0.8204444444444444,0.8204444444444444,0.0,0.0,True,1.0,0.05,0.13333333333333333
+addition→multiplication→powers,1,multiplication,addition,15,0.8475555555555556,0.8475555555555556,0.0,0.0,True,1.0,0.05,1.0
+addition→multiplication→powers,2,powers,addition,15,0.8475555555555556,0.8475555555555556,0.0,0.0,True,1.0,0.05,1.0
+addition→multiplication→powers,2,powers,multiplication,15,0.8160000000000001,0.8160000000000001,0.0,0.0,True,1.0,0.05,1.0
+addition→subtraction→division,1,subtraction,addition,15,0.8446666666666667,0.8446666666666667,0.0,0.0,True,1.0,0.05,1.0
+addition→subtraction→division,2,division,addition,15,0.8446666666666667,0.8446666666666667,0.0,0.0,True,1.0,0.05,1.0
+addition→subtraction→division,2,division,subtraction,15,0.8508888888888888,0.8508888888888888,0.0,0.0,True,1.0,0.05,1.0
