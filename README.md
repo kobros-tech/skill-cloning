@@ -8,29 +8,17 @@ The current research plan is tracked in [Issue #3](https://github.com/kobros-tec
 
 - Prior knowledge can produce positive, negligible, or negative transfer depending on the source-target pair; cloning is not universally beneficial.
 - **Historical relatedness-pair analysis:** multiplication → powers showed approximately 2.31× speedup, multiplication → squares 1.26×, and addition → subtraction negative transfer (0.33×). These values belong to the earlier source→target analysis and should not be confused with the current fixed-target experiment.
-- The expanded fixed-target matrix confirms heterogeneous transfer: powers benefit from additional prior history (471.6 → 355.2 → 237.3 **mean budgeted target-adaptation steps**), while division shows negative transfer (515.2 → 616.2 → 617.5) and squares remains difficult (20.0% → 20.0% → 13.3% success).
+- The expanded fixed-target matrix confirms heterogeneous transfer: powers benefit from additional prior history (471.6 → 355.2 → 237.3 **mean budgeted target-adaptation steps**), while division shows negative transfer (515.2 → 616.2 → **621.8**) and squares remains difficult (20.0% → 20.0% → 13.3% success).
 - A corrected reuse gate requires both compatibility evidence and independent target-solve accuracy, preventing a merely related but unsolved skill from being treated as a zero-training solution.
 - A prerequisite history is considered available only when every requested prerequisite is successfully acquired. Failed prerequisites are recorded but are never exposed to the controller as acquired skills.
 - The retention checks re-evaluate previously acquired skills after later acquisitions on stable skill-specific evaluation sets.
 - The reported zero-change retention checks are consistent with the isolated-skill invariant: stored parent skills are not modified during later skill acquisition.
 - These retention checks are deliberately treated as an implementation/mechanism verification, not as statistical evidence that the system is robust to catastrophic forgetting. A genuine interference experiment would require an at-risk comparison arm in which later learning can modify previously learned parameters.
-- **Signed-domain follow-up:** expanding the operand domain from non-negative (`{0,...,9}`) to signed (`{-9,...,9}`) integers provides a controlled domain-sensitivity test under matched seeds and an otherwise identical protocol. The current branch reports that multiplication → powers reverses direction, multiplication → squares moves toward no effect, and addition → subtraction's negative transfer is reduced, while the addition → multiplication negative control shows no statistically detectable domain change. These results should be treated as domain-sensitive observations for this controlled task family, not universal claims.
+- **Signed-domain follow-up:** the operand domain is expanded using task-specific signed ranges while keeping the protocol otherwise fixed. For example, addition, subtraction, multiplication, and squares use `[-9, 9]`; powers use a signed base range with a non-negative exponent; and division uses signed numerators with nonzero signed divisors. The current branch reports that multiplication → powers reverses direction, multiplication → squares moves toward no effect, and addition → subtraction's negative transfer is reduced, while the addition → multiplication negative control shows no statistically detectable domain change. These results should be treated as domain-sensitive observations for this controlled task family, not universal claims.
 
 ## Final paper
 
-The final-paper PR is documentation and analysis only. It does not introduce a new learning algorithm. It organizes the evidence into:
-
-- abstract and research questions;
-- experimental setup and data separation;
-- formal mathematical formulation;
-- acquisition and transfer results;
-- fixed-target prerequisite-history analysis;
-- mechanism-level retention verification;
-- signed-domain transfer robustness;
-- statistical interpretation;
-- limitations and threats to validity;
-- reproducibility checklist;
-- publication-ready tables.
+The final paper draft documents the experimental system, mathematical formulation, fixed-target prerequisite analysis, skill-isolation mechanism check, signed-domain robustness analysis, statistical interpretation, limitations, and reproducibility checklist. PR #7 additionally adds the signed-domain experiment and its regression tests; it is not documentation-only.
 
 See:
 
@@ -56,8 +44,12 @@ Outputs:
 
 The check uses 15 seeds per representative sequence and a five-percentage-point tolerance retained as a sanity bound, not a statistical margin.
 
-Run it with:
+## Signed-domain follow-up
 
-```bash
-python experiments/retention.py
-python -m unittest discover -s tests -v
+`experiments/signed_domain_transfer.py` compares the original non-negative task distribution with an explicitly configured signed-domain distribution. The comparison uses matched seeds and reports source-acquisition attrition separately from target acquisition and paired transfer statistics.
+
+The signed-domain experiment is included in CI and is covered by regression tests for domain configuration, reproducibility, compatibility-score domain threading, zero-divisor avoidance, and fail-closed prerequisite semantics.
+
+## Scope
+
+Results are conditional on the tested arithmetic task family, architecture, optimizer, controller, thresholds, seed count, stopping rule, and domain expansion. They should be interpreted as evidence for the proposed mechanism in this controlled setting rather than as universal claims about continual learning.
