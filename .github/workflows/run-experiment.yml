@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -46,6 +49,20 @@ jobs:
 
       - name: Print summary
         run: python src/print_summary.py >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Sync generated results into repository
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: |
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/
+          if git diff --cached --quiet; then
+            echo "No generated result changes to commit."
+            exit 0
+          fi
+          git commit -m "Sync workflow-generated experiment results [skip ci]"
+          git push origin "HEAD:${BRANCH}"
 
       - name: Upload results
         if: always()
