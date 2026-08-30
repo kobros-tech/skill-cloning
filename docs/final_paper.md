@@ -38,7 +38,7 @@ The corrected reuse gate is important. A high frozen compatibility score alone i
 
 Let the incoming target task be $T$ and let the repository contain previously acquired skills $s_i$, each represented by a parameter vector $\theta_i$. A skill maps an input $x$ to an output through $f(x;\theta_i)$.
 
-For a target probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
+For a target compatibility-probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
 
 $$
 \mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}
@@ -51,7 +51,18 @@ $$
 
 The compatibility score is computed without updating $\theta_i$. It therefore measures how well the frozen parent already matches the target, rather than how useful its internal representation will necessarily be after adaptation.
 
-Let $A(T,s_i)$ denote the independent target-solve accuracy used by the corrected reuse gate. With thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects an action according to:
+The controller then evaluates the same frozen parent on a separate **solve/calibration batch** $D_T^{\mathrm{solve}}=\{(x_j,y_j)\}_{j=1}^{64}$, sampled independently from the compatibility probe. The target-solve accuracy is defined as the fraction of calibration examples whose absolute prediction error is at most the experiment's accuracy tolerance $\epsilon=0.5$:
+
+$$
+A(T,s_i)=\frac{1}{64}\sum_{j=1}^{64}
+\mathbf{1}\!\left[
+\left|f(x_j;\theta_i)-y_j\right|\leq0.5
+\right].
+$$
+
+Thus $A(T,s_i)$ is an independently measured estimate of whether the frozen parent actually solves the target, rather than a relabeling derived from the compatibility score. The solve/calibration batch is separate from both the training data and the compatibility-probe batch, and the held-out test set is never consulted by the reuse decision. In the implementation, the calibration batch uses the independent solve-probe seed offset $20{,}000$ and the same task sampling procedure as the experiments.
+
+With thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects an action according to:
 
 $$
 \mathrm{action}(T,s_i)=
@@ -133,7 +144,7 @@ Because the stored parent is not optimized after acquisition and the evaluation 
 
 ### Data separation
 
-The experiment separates target-training data, compatibility-probe data, solve/accuracy data, and held-out evaluation data. Held-out evaluation data are not used to choose thresholds, budgets, stopping rules, or model-selection decisions.
+The experiment separates target-training data, compatibility-probe data, solve/calibration data, and held-out evaluation data. Held-out evaluation data are not used to choose thresholds, budgets, stopping rules, or model-selection decisions.
 
 ### Seeds
 
