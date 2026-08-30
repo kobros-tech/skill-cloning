@@ -1,11 +1,9 @@
-"""Matched control for distinguishing relevant transfer from generic pretraining.
+"""Matched control separating relevant transfer from generic pretraining.
 
-For each target, compare scratch learning with cloning from the controller's
-selected parent and cloning from a deliberately unrelated previously learned
-skill. This is an exploratory control; it uses the same target data, optimizer,
-architecture, budget, and seed for all arms.
-
-Results are written to results/unrelated_parent_control.csv when run directly.
+Only skills acquired before a target are eligible as parents. The controller-
+selected parent is compared with an unrelated earlier parent and scratch
+initialization. This is an exploratory control, not a replacement for the
+authoritative fixed-target experiment.
 """
 from __future__ import annotations
 
@@ -16,7 +14,7 @@ import pandas as pd
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
-from skill import TinyMLP
+from skill import TinyMLP, Skill
 from tasks import TASK_ORDER, sample_task
 import strategies as strat
 import compatibility as comp
@@ -25,54 +23,48 @@ N_SEEDS = 15
 
 
 def train(net, X, y):
-    _, steps = strat._train_track_accuracy(
-        net, X, y, strat.EPOCHS, strat.LR, strat.ACC_TARGET
-    )
+    _, steps = strat._train_track_accuracy(net, X, y, strat.EPOCHS, strat.LR, strat.ACC_TARGET)
     return steps
 
 
 def run(n_seeds=N_SEEDS):
     rows = []
     for seed in range(n_seeds):
-        # Build the same acquired history used by the proposed controller.
-        skills = {}
-        for step, task in enumerate(TASK_ORDER):
-            X, y = sample_task(task, strat.N_TRAIN, seed=seed * 100 + step)
-            net = TinyMLP(hidden_dim=strat.HIDDEN_DIM, seed=seed * 100 + step)
-            train(net, X, y)
-            skills[task] = net
+        skills: dict[str, Skill] = {}
+        for step, target in enumerate(TASK_ORDER):
+            # Never expose the target or future tasks to parent selection.
+            if len(skills) >= 2:
+                X, y = sample_task(target, strat.N_TRAIN, seed=seed * 100 + step)
+                decision = comp.decide(skills, target, base_seed=seed * 100 + step)
+                relevant = decision["parent"]
+                unrelated = next(name for name in skills if name != relevant)
 
-        # Only targets with a distinct earlier task are included.
-        for target in TASK_ORDER[1:]:
-            X, y = sample_task(target, strat.N_TRAIN, seed=seed * 100 + TASK_ORDER.index(target))
-            decision = comp.decide({
-                name: type("S", (), {"name": name, "net": net})()
-                for name, net in skills.items()
-                if name != target
-            }, target, base_seed=seed * 100 + TASK_ORDER.index(target))
+                arms = {
+                    "scratch": TinyMLP(hidden_dim=strat.HIDDEN_DIM, seed=seed * 100 + step),
+                    "relevant_clone": skills[relevant].net.clone(),
+                    "unrelated_clone": skills[unrelated].net.clone(),
+                }
+                for arm, net in arms.items():
+                    net.reset_optimizer()
+                    steps = train(net, X, y)
+                    rows.append({
+                        "seed": seed,
+                        "target": target,
+                        "relevant_parent": relevant,
+                        "unrelated_parent": unrelated,
+                        "arm": arm,
+                        "convergence_steps": steps,
+                        "final_mse": net.mse(X, y),
+                        "final_acc": net.accuracy(X, y, tol=strat.ACC_TOL),
+                    })
 
-            relevant = decision["parent"]
-            candidates = [t for t in TASK_ORDER if t != target and t != relevant and t in skills]
-            if not candidates:
-                continue
-            unrelated = candidates[0]
+            # Independently acquire this task to construct the history for the
+            # next curriculum step; this is not one of the comparison arms.
+            X_hist, y_hist = sample_task(target, strat.N_TRAIN, seed=seed * 100 + step)
+            hist_net = TinyMLP(hidden_dim=strat.HIDDEN_DIM, seed=seed * 100 + step)
+            train(hist_net, X_hist, y_hist)
+            skills[target] = Skill(target, hist_net, origin="scratch")
 
-            scratch = TinyMLP(hidden_dim=strat.HIDDEN_DIM, seed=seed * 100 + TASK_ORDER.index(target))
-            clone_relevant = skills[relevant].clone() if hasattr(skills[relevant], "clone") else skills[relevant].clone()
-            clone_unrelated = skills[unrelated].clone() if hasattr(skills[unrelated], "clone") else skills[unrelated].clone()
-            for net, arm in [(scratch, "scratch"), (clone_relevant, "relevant_clone"), (clone_unrelated, "unrelated_clone")]:
-                net.reset_optimizer()
-                steps = train(net, X, y)
-                rows.append({
-                    "seed": seed,
-                    "target": target,
-                    "relevant_parent": relevant,
-                    "unrelated_parent": unrelated,
-                    "arm": arm,
-                    "convergence_steps": steps,
-                    "final_mse": net.mse(X, y),
-                    "final_acc": net.accuracy(X, y, tol=strat.ACC_TOL),
-                })
     return pd.DataFrame(rows)
 
 
