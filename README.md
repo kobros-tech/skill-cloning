@@ -18,7 +18,19 @@ The current research plan is tracked in [Issue #3](https://github.com/kobros-tec
 
 ## Final paper
 
-The final paper draft documents the experimental system, mathematical formulation, fixed-target prerequisite analysis, skill-isolation mechanism check, signed-domain robustness analysis, statistical interpretation, limitations, and reproducibility checklist. PR #7 additionally adds the signed-domain experiment and its regression tests; it is not documentation-only.
+The final-paper PR organizes the evidence into:
+
+- abstract and research questions;
+- experimental setup and data separation;
+- formal mathematical formulation;
+- acquisition and transfer results;
+- fixed-target prerequisite-history analysis;
+- mechanism-level retention verification;
+- signed-domain robustness analysis;
+- statistical interpretation;
+- limitations and threats to validity;
+- reproducibility checklist;
+- publication-ready tables.
 
 See:
 
@@ -30,7 +42,7 @@ See:
 
 Every push and pull request re-runs the experiment suite and regression tests through `.github/workflows/run-experiment.yml`. The workflow prints the report and statistics tables to the GitHub Actions Summary and uploads generated CSV/plot artifacts.
 
-## Skill-isolation invariant check (not a statistical retention experiment)
+## Retention / mechanism check
 
 `experiments/retention.py` runs sequential skill acquisition and re-evaluates every previously acquired skill after each later acquisition, on a stable, deterministic evaluation set per skill.
 
@@ -44,12 +56,19 @@ Outputs:
 
 The check uses 15 seeds per representative sequence and a five-percentage-point tolerance retained as a sanity bound, not a statistical margin.
 
+Run it with:
+
+```bash
+python experiments/retention.py
+python -m unittest discover -s tests -v
+```
+
 ## Signed-domain follow-up
 
 `experiments/signed_domain_transfer.py` compares the original non-negative task distribution with an explicitly configured signed-domain distribution. The comparison uses matched seeds and reports source-acquisition attrition separately from target acquisition and paired transfer statistics.
 
 The signed-domain experiment is included in CI and is covered by regression tests for domain configuration, reproducibility, compatibility-score domain threading, zero-divisor avoidance, and fail-closed prerequisite semantics.
 
-## Scope
+## Reproducibility and scope
 
-Results are conditional on the tested arithmetic task family, architecture, optimizer, controller, thresholds, seed count, stopping rule, and domain expansion. They should be interpreted as evidence for the proposed mechanism in this controlled setting rather than as universal claims about continual learning.
+The project remains intentionally small and dependency-light. Results are conditional on the tested arithmetic task family, architecture, optimizer, controller, thresholds, seed count, stopping rule, and domain expansion. They should be interpreted as evidence for the proposed mechanism in this controlled setting rather than as universal claims about continual learning.
