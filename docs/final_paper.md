@@ -4,7 +4,7 @@
 
 Continual acquisition systems must learn new skills without unnecessarily discarding useful prior knowledge. This study evaluates a small, reproducible skill-acquisition framework in which an incoming task is handled by one of three routes: reuse an existing skill when it already solves the target, clone a related skill and adapt it when reuse is insufficient, or learn from a fresh initialization when prior knowledge is not useful. The experiments use small arithmetic regression tasks and matched random seeds to separate acquisition reliability, acquisition efficiency, transfer, and the preservation of previously acquired skills.
 
-The central result is that prior knowledge is not uniformly beneficial: observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both positive and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. A signed-domain follow-up further shows that transfer behavior can be distribution-sensitive: expanding the operand domain from non-negative to signed integers reversed the direction of the strongest transfer result (multiplication → powers, 2.17× → 0.72×) and eroded another toward no effect (multiplication → squares, 1.23× → 1.01×), while a null-control pair remained statistically stable. A separate skill-isolation check confirmed that previously acquired skills' stored parameters are not modified by later acquisitions. This is an implementation invariant of the current architecture, not a statistical finding about resistance to catastrophic forgetting.
+The central result is that prior knowledge is not uniformly beneficial: observed transfer depends on the source-target relationship and on how the controller evaluates that relationship. Earlier experiments showed both positive and negative transfer, motivating a fixed-target prerequisite design rather than a simple ranking of source-target pairs. A signed-domain follow-up further shows that transfer behavior can be distribution-sensitive: expanding the operand domain from non-negative to signed integers reversed the direction of the strongest transfer result (multiplication → powers, 2.22× → 0.70× on the valid matched seeds) and moved another toward no effect (multiplication → squares, 1.27× → 1.03×). The addition → subtraction effect also moved from negative transfer toward neutral, while the addition → multiplication null control remained statistically stable. The signed-domain powers and squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition failed in 10 seeds; this attrition is reported explicitly rather than hidden. A separate skill-isolation check confirmed that previously acquired skills' stored parameters are not modified by later acquisitions. This is an implementation invariant of the current architecture, not a statistical finding about resistance to catastrophic forgetting.
 
 ## 1. Introduction
 
@@ -205,30 +205,32 @@ This follow-up reruns the four relatedness pairs from Section 4.1 under matched 
 
 Only the operand domain changes. Architecture, optimizer, learning rate, stopping criterion, training budget, seed protocol, compatibility calculation, and data-role separation are otherwise held fixed.
 
-The experiment's non-negative-domain rerun gives 2.17×, 1.23×, 0.41×, and 1.15× for the four pairs, respectively. These values are close in direction and magnitude to the historical results in Section 4.1, although they are not byte-identical because the follow-up uses an independently constructed seed/data-generation scheme.
+The experiment's current non-negative-domain rerun gives mean speedups of 2.217×, 1.265×, 0.408×, and 1.145× for multiplication → powers, multiplication → squares, addition → subtraction, and addition → multiplication, respectively. These values are the current artifact's statistics rather than the older rounded values used in the earlier draft.
 
 **Result: transfer is not uniformly robust to this domain expansion.**
 
-| Pair                                     | Non-negative speedup | Signed speedup | Paired t-test p | Direction reversed?                |
-| ---------------------------------------- | -------------------: | -------------: | --------------: | ---------------------------------- |
-| multiplication → powers                  |                2.17× |          0.72× |        5.6×10⁻⁸ | **Yes**                            |
-| multiplication → squares                 |                1.23× |          1.01× |        7.0×10⁻⁵ | No; erodes toward null             |
-| addition → subtraction                   |                0.41× |          1.00× |        1.9×10⁻⁷ | Yes; negative transfer neutralizes |
-| addition → multiplication (null control) |                1.15× |          1.18× |            0.59 | No                                 |
+| Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative − signed) | Paired t-test p | Direction reversed? |
+| ---------------------------------------- | --------------: | -------------------: | -------------: | ----------------------------------------: | --------------: | ---------------------------------- |
+| multiplication → powers | 5/15 | 2.217 ± 0.530 | 0.703 ± 0.141 | 1.514 ± 0.451 | 0.00168 | **Yes** |
+| multiplication → squares | 5/15 | 1.265 ± 0.178 | 1.031 ± 0.069 | 0.235 ± 0.220 | 0.0757 | No; erodes toward null |
+| addition → subtraction | 15/15 | 0.408 ± 0.100 | 1.001 ± 0.224 | −0.594 ± 0.243 | 1.88×10⁻⁷ | Yes; negative transfer neutralizes |
+| addition → multiplication (null control) | 15/15 | 1.145 ± 0.138 | 1.176 ± 0.128 | −0.031 ± 0.218 | 0.591 | No |
 
-Three qualitatively different outcomes appear across four pairs.
+The powers and squares comparisons have only **5/15 valid matched seeds**. In the signed domain, the multiplication prerequisite failed acquisition in 10 of 15 seeds for each pair, so only five seeds had a valid source skill and a corresponding clone/scratch comparison. Those failures are not silently converted into speedup values and are not treated as successful matched observations. The reduced paired sample size is therefore part of the result and must accompany the corresponding p-values.
 
-**Multiplication → powers reverses direction.** A substantial positive transfer effect in the non-negative domain (2.17×) becomes negative transfer in the signed domain (0.72×). A sign-specific diagnostic breakdown of the trained clone's held-out error provides a plausible, but not proven, mechanism: negative-base/odd-exponent inputs, which do not occur in the non-negative domain, have substantially higher error than positive-base inputs. The signed domain therefore introduces a harder sub-problem that the multiplication-derived initialization appears poorly suited to under this protocol.
+**Multiplication → powers reverses direction.** A positive transfer effect in the non-negative domain (2.217×) becomes negative transfer in the signed domain (0.703×) on the five valid matched seeds. The paired comparison remains statistically different (`p=0.00168`). A sign-specific diagnostic breakdown of the trained clone's held-out error provides a plausible, but not proven, mechanism: negative-base/odd-exponent inputs, which do not occur in the non-negative domain, have substantially higher error than positive-base inputs. The signed domain therefore introduces a harder sub-problem that the multiplication-derived initialization appears poorly suited to under this protocol.
 
-**Multiplication → squares erodes toward no effect.** The already modest 1.23× speedup shrinks to 1.01×. The sign-specific diagnostic shows essentially symmetric error for positive- and negative-base inputs (0.486 versus 0.489 mean absolute error), which is consistent with the sign-invariance of squares, \((-a)^2=a^2\). The erosion therefore appears more consistent with a deterioration in frozen compatibility across the expanded input region than with a base-sign-specific failure.
+**Multiplication → squares erodes toward no effect.** The observed speedup changes from 1.265× to 1.031× on the five valid matched seeds. The current paired test is **not conventionally statistically significant** (`p=0.0757`). The appropriate conclusion is therefore that the observed positive transfer erodes toward no effect; the experiment does not establish a statistically significant domain difference for this pair. The sign-specific diagnostic shows essentially symmetric error for positive- and negative-base inputs (0.486 versus 0.489 mean absolute error), which is consistent with the sign-invariance of squares, \((-a)^2=a^2\).
 
-**Addition → subtraction's negative transfer neutralizes.** The negative transfer observed in the non-negative domain (0.41×) becomes approximately neutral in the signed domain (1.00×). The sign breakdown shows that same-sign subtraction pairs are learned more accurately than mixed-sign pairs, consistent with same-sign subtraction sharing some structure with the addition parent while mixed-sign subtraction introduces a different input relationship.
+**Addition → subtraction's negative transfer neutralizes.** The negative transfer observed in the non-negative domain (0.408×) becomes approximately neutral in the signed domain (1.001×), with all 15 seeds valid. The sign breakdown shows that same-sign subtraction pairs are learned more accurately than mixed-sign pairs, consistent with same-sign subtraction sharing some structure with the addition parent while mixed-sign subtraction introduces a different input relationship.
 
-**Addition → multiplication remains a null control.** The speedup changes from 1.15× to 1.18×, with no statistically detectable difference between domains (\(p=0.59\)). The stability of this negative-control pair while the other three pairs change substantially argues against the explanation that the domain manipulation simply shifts every result through a generic training or sample-size artifact.
+**Addition → multiplication remains a null control.** The speedup changes from 1.145× to 1.176×, with no statistically detectable difference between domains (`p=0.591`). The stability of this negative-control pair while the other three pairs change qualitatively supports the narrower interpretation that the observed changes are not simply a generic effect of the domain manipulation on every pair.
 
 ### Acquisition reliability under the signed domain
 
-The fixed-target prerequisite-history matrix was also evaluated under both domains. Squares' already-low acquisition success rate in the non-negative domain, approximately 13–20% across prior-skill histories, falls to exactly 0% in the signed domain for every history condition.
+The fixed-target prerequisite-history matrix was also evaluated under both domains. Squares' success rate in the non-negative domain is 20.0%, 20.0%, and 13.3% across the three prior histories, and it falls to exactly 0.0% in the corresponding signed-domain histories.
+
+Subtraction and powers have 100% target-acquisition success in all valid signed-domain histories. Division also has 100% target success in every history that reaches the target attempt. Some signed-domain histories fail earlier because a requested prerequisite is not acquired; those histories are marked invalid and the failed prerequisite is never exposed to the controller.
 
 This is a reliability failure in addition to the transfer-efficiency changes. It should not be interpreted as evidence that signed inputs universally make squares difficult; it is evidence that this particular system and training protocol failed to acquire the signed-domain square task within the declared budget.
 
@@ -260,7 +262,7 @@ The fixed-target matrix is the primary current evidence for history-dependent ac
 
 For paired strategy comparisons, the unit of analysis is the matched seed. Reported summaries include the mean paired difference, variability, interval estimates, effect sizes, and paired significance tests where appropriate for acquisition comparisons.
 
-For the signed-domain comparisons, each seed is paired across the non-negative and signed conditions. The paired test therefore evaluates within-seed changes rather than treating the two domains as independent samples.
+For the signed-domain comparisons, each seed is paired across the non-negative and signed conditions **only when both conditions yield a valid source acquisition and therefore a valid clone/scratch pair**. The paired test therefore evaluates within-seed changes without treating prerequisite failures as artificial speedup observations. The effective paired sample size is reported explicitly for each pair.
 
 The retention check is intentionally treated differently. Its primary diagnostic quantity is:
 
@@ -289,7 +291,9 @@ The three-route controller is therefore important. Reuse is appropriate when an 
 
 The authoritative fixed-target results strengthen this interpretation: powers benefit from additional prior history, while division exhibits negative transfer and squares remains difficult. These heterogeneous outcomes prevent the conclusion from being reduced to "cloning always helps."
 
-The signed-domain follow-up adds an important qualification. Transfer benefits are not fixed properties of source-target task labels alone. Under the tested distribution expansion, multiplication → powers reverses direction, multiplication → squares approaches no effect, and addition → subtraction's negative transfer disappears, while the null control remains stable. This suggests that the usefulness of a cloned representation depends jointly on the source-target relationship and the distribution on which that relationship is evaluated.
+The signed-domain follow-up adds an important qualification. Transfer benefits are not fixed properties of source-target task labels alone. Under the tested distribution expansion, multiplication → powers reverses direction (2.217× to 0.703× on the valid matched seeds), multiplication → squares approaches no effect (1.265× to 1.031×, with `p=0.0757`), and addition → subtraction's negative transfer disappears (0.408× to 1.001×), while the null control remains stable (1.145× to 1.176×, `p=0.591`). The powers and squares paired comparisons use only 5 of 15 seeds because signed-domain multiplication prerequisite acquisition failed for 10 seeds; this limits the strength of those domain-comparison conclusions and is itself a reproducibility-relevant result.
+
+This suggests that the usefulness of a cloned representation depends jointly on the source-target relationship and the distribution on which that relationship is evaluated.
 
 The skill-isolation invariant check supports the architectural design rationale: independently storing skills and avoiding updates to stored parent parameters provides a direct mechanism for accumulating capabilities without overwriting earlier skills. This is a design-level guarantee confirmed by the implementation check, not an empirical demonstration that catastrophic forgetting is absent from continual-learning systems generally.
 
@@ -317,7 +321,9 @@ At the same time, the heterogeneous transfer results show that the harder scient
 
 10. **Distribution shift versus sign effect.** Expanding the domain changes the input distribution in ways beyond simply introducing negative values. The experiment therefore supports a claim about domain/distribution sensitivity rather than an isolated causal claim about the presence of negative numbers.
 
-11. **Acquisition reliability.** The fixed training budget creates a distinction between failure to acquire a skill within the budget and impossibility of acquiring that skill. The reported success rates should therefore be interpreted relative to the declared budget and stopping criterion.
+11. **Matched-pair attrition.** The signed-domain multiplication→powers and multiplication→squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. The resulting p-values describe the five valid matched pairs, not all 15 nominal seeds. This reduces statistical power and makes the signed-domain result less precise for those pairs.
+
+12. **Acquisition reliability.** The fixed training budget creates a distinction between failure to acquire a skill within the budget and impossibility of acquiring that skill. The reported success rates should therefore be interpreted relative to the declared budget and stopping criterion.
 
 ## 8. Reproducibility
 
@@ -325,7 +331,7 @@ The repository contains the experiment drivers, regression tests, workflow confi
 
 The skill-isolation check records the seed, target sequence, acquisition strategy, source skill, compatibility diagnostics, pre/post accuracy, recorded accuracy change, and pass/fail decision.
 
-The signed-domain follow-up records both domain conditions under matched seeds and includes per-seed pair results, summary statistics, sign-specific diagnostic breakdowns, and generated plots.
+The signed-domain follow-up records both domain conditions under matched seeds and includes per-seed pair results, summary statistics, sign-specific diagnostic breakdowns, and generated plots. The publication tables report the effective valid matched-seed count alongside the paired statistics.
 
 The non-negative domain remains the default task configuration. The signed domain is an explicit experimental configuration and does not silently alter the baseline task distribution.
 
@@ -333,7 +339,7 @@ The non-negative domain remains the default task configuration. The signed domai
 
 This prototype demonstrates a controlled approach to continual skill acquisition in which the system can choose among reuse, clone-and-adapt, and scratch learning while preserving previously acquired skills through independent storage.
 
-The most defensible conclusion is not that cloning always improves learning. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, and that these transfer effects can themselves be sensitive to the input distribution. The signed-domain follow-up demonstrates this sensitivity directly: multiplication → powers reverses from positive to negative transfer, multiplication → squares moves toward no effect, and addition → subtraction's negative transfer neutralizes, while the null control remains stable.
+The most defensible conclusion is not that cloning always improves learning. Instead, the experiments show that prior knowledge can have positive, negligible, or negative effects depending on the target and source relationship, and that these transfer effects can themselves be sensitive to the input distribution. The signed-domain follow-up demonstrates this sensitivity directly: multiplication → powers reverses from positive to negative transfer, multiplication → squares moves toward no effect without a conventionally significant paired domain difference, and addition → subtraction's negative transfer neutralizes, while the null control remains stable. The strongest signed-domain pair comparisons are limited by prerequisite-acquisition attrition, with only 5/15 valid matched seeds for multiplication→powers and multiplication→squares.
 
 The isolated-skill mechanism provides a separate implementation-level guarantee: previously stored skills are not modified during later acquisition under the tested architecture. This is a useful architectural property, but it should not be confused with an empirical demonstration of resistance to catastrophic forgetting.
 
@@ -358,6 +364,7 @@ The work therefore establishes an experimental foundation for a broader research
 * [x] Signed-domain comparisons use matched seeds.
 * [x] Signed-domain analysis holds architecture, optimizer, training budget, controller, thresholds, and data-role separation fixed.
 * [x] Signed-domain results include paired statistical comparisons.
+* [x] Signed-domain publication tables report valid matched-seed counts and prerequisite-acquisition attrition.
 * [x] Signed-domain conclusions are explicitly limited to the tested domain/distribution expansion.
 * [ ] A genuine at-risk empirical retention experiment with a shared-parameter interference baseline remains future work.
 * [ ] Broader task families and larger models remain future validation targets.
