@@ -41,7 +41,7 @@ The results show heterogeneous transfer: additional prior skills substantially h
 | Evaluation set | Stable, skill-specific held-out set | 300 examples / check |
 | Practical retention tolerance | Maximum diagnostic accuracy loss | 5 percentage points |
 | Repeated-check mean delta | Post accuracy $-$ pre accuracy | 0.0000 in reported checks |
-| Maximum absolute accuracy change | $\max(|\text{post accuracy}-\text{pre accuracy}|)$ across all checks | 0.0 |
+| Maximum absolute accuracy change | $\max(\lvert\text{post accuracy}-\text{pre accuracy}\rvert)$ across all checks | 0.0 |
 | All deltas exactly zero | Whether every check landed at exactly 0.0 | True |
 | Retention pass rate | Fraction with delta $\geq-0.05$ | 100% |
 
