@@ -32,15 +32,15 @@ These questions are answered with matched deterministic seeds, explicit separati
 
 This work makes four contributions:
 
-1. **A controlled three-route skill-acquisition framework.** We formalize a reproducible acquisition protocol that distinguishes reuse, clone-and-adapt, and scratch learning, with explicit compatibility and independent solve checks. This separates the decision to reuse a capability from the subsequent question of whether cloning that capability provides a useful initialization.
+1. **A controlled three-route skill-acquisition framework.** We define and evaluate a reproducible acquisition protocol with three explicit alternatives—reuse, clone-and-adapt, and scratch—together with separate compatibility and independent solve checks. This separates the decision to reuse an existing capability from the decision to use that capability as an initialization for further learning.
 
-2. **Evidence that transfer depends on the acquired skill and its parent, not only on pretraining.** Matched experiments show heterogeneous transfer across source-target pairs, including both positive and negative transfer. The three-arm parent-control experiment further isolates parent identity from the generic benefit of starting from pretrained parameters, showing that relevant and unrelated parents can produce measurably different acquisition costs under the same target, seed, data, architecture, and budget.
+2. **Evidence for heterogeneous transfer and parent-specific effects.** Matched experiments show that prior skills can produce positive, negative, or limited transfer depending on the target. The three-arm parent-control experiment goes beyond a generic pretrained-versus-scratch comparison by holding the target, seed, data, architecture, optimizer, and budget fixed while varying only the parent identity; the resulting differences provide evidence that the identity of the transferred skill matters under the tested protocol.
 
-3. **A controlled analysis of transfer under changing task distributions.** The signed-domain follow-up tests whether observed transfer effects persist when the operand distribution changes from non-negative to signed values. The results show that transfer can change in magnitude and even reverse direction, establishing distribution sensitivity rather than assuming invariance.
+3. **Evidence that transfer is sensitive to the task distribution.** The signed-domain follow-up tests whether source-target transfer relationships remain stable when operand distributions change from non-negative to signed values. The observed changes include both substantial shifts in magnitude and a reversal of transfer direction, showing that transfer is not a fixed property of task labels alone.
 
-4. **A reproducible experimental methodology for studying skill transfer.** The study uses matched deterministic seeds, separated training/probe/calibration/evaluation data, explicit budget-capped acquisition metrics, prerequisite-validity accounting, and multiplicity-corrected paired inference. The retention component is explicitly framed as an architectural isolation invariant rather than as a general claim of immunity to catastrophic forgetting.
+4. **A reproducible methodology for controlled transfer studies.** The study combines matched deterministic seeds, separated training/probe/calibration/evaluation data, explicit budget-capped acquisition metrics, prerequisite-validity accounting, and multiplicity-corrected paired inference. Retention is deliberately reported as an architectural isolation invariant rather than as evidence of general immunity to catastrophic forgetting.
 
-Together, these contributions support a bounded conclusion: under the tested controlled protocol, prior skills can be useful, harmful, or largely neutral depending on the target, parent identity, and data distribution. The work does not claim that these transfer patterns generalize unchanged to larger architectures or unrelated domains; instead, it provides a controlled setting in which those effects can be measured and distinguished.
+Together, these contributions establish a bounded empirical claim: under the tested controlled protocol, prior skills can be useful, harmful, or largely neutral, and their effect depends on the target, parent identity, and data distribution. The work does not claim that these transfer patterns necessarily generalize to larger architectures or unrelated domains; instead, it provides a controlled setting in which the relevant effects can be isolated and measured.
 
 ## 2. Experimental system
 
@@ -194,13 +194,15 @@ This control is intentionally stronger than a comparison of clone versus scratch
 
 The retention code performs sequential acquisition and re-evaluates every previously acquired skill after each later acquisition on a stable, skill-specific evaluation set. This verifies the intended isolation invariant: a stored parent skill is not modified when a later skill is trained as an independent copy.
 
-For each retention check the implementation records pre/post accuracy, accuracy change, retention ratio, and whether the change remains within a predeclared five-percentage-point practical tolerance. These measurements are useful diagnostics of the invariant, but they should not be interpreted as a conventional statistical test of forgetting because the isolated-skill architecture does not expose the stored parent to subsequent optimization. In particular, repeated evaluation of an unchanged network on a stable evaluation set is expected to produce the same result.
+For each retention check the implementation records pre/post accuracy, accuracy change, retention ratio, and whether the change remains within a predeclared five-percentage-point practical tolerance. These measurements are useful diagnostics of the invariant, but they should not be interpreted as a conventional statistical test of forgetting because the isolated-skill architecture does not expose the stored parent to subsequent optimization.
+
+In particular, repeated evaluation of an unchanged network on a stable evaluation set is expected to produce the same result.
 
 A genuine empirical test of resistance to interference would require an at-risk comparison arm in which later learning can modify previously learned parameters, such as a shared-network baseline. That comparison is outside the scope of this PR and is not claimed here.
 
 ### 3.4 Signed-domain follow-up
 
-The signed-domain experiment compares the original non-negative configuration with an explicitly configured signed configuration. Task ranges are task-specific: addition, subtraction, multiplication, powers, and squares use the signed sampling ranges documented in the experiment configuration. The purpose is not to establish a universal domain-shift benchmark, but to test whether the observed transfer relationships are stable under a concrete change in operand distribution.
+The signed-domain experiment compares the original non-negative configuration with an explicitly configured signed configuration. Task ranges are task-specific: addition, subtraction, multiplication, and squares use the signed sampling ranges documented in the experiment configuration. The purpose is not to establish a universal domain-shift benchmark, but to test whether the observed transfer relationships are stable under a concrete change in operand distribution.
 
 ## 4. Results
 
@@ -218,7 +220,7 @@ The pattern is important because it is not consistent with a simple rule that "p
 
 The signed-domain follow-up shows that transfer can change when the input distribution changes. On the valid matched seeds, multiplication $\rightarrow$ powers changes from $2.217\times$ to $0.703\times$ and reverses direction ($p=0.00168$). Multiplication $\rightarrow$ squares changes from $1.265\times$ to $1.031\times$ without a conventionally significant domain difference ($p=0.0757$). Addition $\rightarrow$ subtraction changes from $0.408\times$ to $1.001\times$ ($p\approx1.88\times10^{-7}$), while the addition $\rightarrow$ multiplication null control changes from $1.145\times$ to $1.176\times$ with no statistically detectable domain difference ($p=0.591$).
 
-The powers and squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. These comparisons are therefore interpreted as limited domain-sensitivity evidence rather than as high-powered general conclusions.
+The powers and squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. These results are therefore interpreted as limited domain-sensitivity evidence rather than as high-powered general conclusions.
 
 ### 4.4 Retention
 
