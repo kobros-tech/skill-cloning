@@ -11,6 +11,8 @@ These tables are intended as the compact statistical presentation for the final 
 | Addition → Subtraction | 0.156 | 0.33× | 2.3×10⁻¹² | Negative transfer |
 | Addition → Multiplication | 0.005 | 1.12× | 0.013 | Small positive control effect |
 
+**Historical-result note:** Table 1 summarizes the earlier source→target analysis. The pre-fix Powers generalization result associated with the false-reuse controller is superseded and is not represented by this table's speedup statistic.
+
 The table demonstrates why compatibility score should not be interpreted as a complete predictor of transfer usefulness.
 
 ## Table 2 — Fixed-target prerequisite matrix
@@ -19,14 +21,14 @@ The expanded experiment holds the target fixed while varying the prior-skill his
 
 | Target | No prior skill | Addition only | Addition + Multiplication |
 |---|---:|---:|---:|
-| Subtraction | 33.5 epochs | 62.3 epochs | 73.2 epochs |
-| Division | 515.2 epochs | 616.2 epochs | 617.5 epochs |
+| Subtraction | 33.5 budgeted steps | 62.3 budgeted steps | 73.2 budgeted steps |
+| Division | 515.2 budgeted steps | 616.2 budgeted steps | 617.5 budgeted steps |
 | Squares | 20.0% success | 20.0% success | 13.3% success |
-| Powers | 471.6 epochs | 355.2 epochs | 237.3 epochs |
+| Powers | 471.6 budgeted steps | 355.2 budgeted steps | 237.3 budgeted steps |
 
-For subtraction, division, and powers, the values are acquisition epochs to the declared criterion. Squares is reported as success rate because many runs do not reach the acquisition criterion within the allowed budget. The results show heterogeneous transfer: additional prior skills substantially help powers, while division exhibits negative transfer and squares remains difficult.
+For subtraction, division, and powers, the values are **mean budgeted acquisition steps across all 15 seeds**, with an unsuccessful run assigned the full 1500-step budget. They are therefore not mean convergence times among successful runs. Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
 
-These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
+The results show heterogeneous transfer: additional prior skills substantially help powers, while division exhibits negative transfer and squares remains difficult. These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
 
 ## Table 3 — Retention mechanism check
 
