@@ -10,17 +10,23 @@ The retention checks verify a narrower architectural property: under the tested 
 
 ## 1. Introduction
 
-A continual-learning system should be able to acquire a new capability while preserving capabilities that it has already learned. A simple shared-network strategy can update parameters for every new task, making the system vulnerable to interference. An alternative is to treat each learned capability as an independently stored skill and decide, for each incoming task, whether an existing skill should be reused, cloned and adapted, or whether learning should begin from scratch.
+Continual learning is not only a question of whether a model can learn a new task; it is also a question of how previously acquired capabilities should be used when a new task arrives. If all tasks continually update one shared parameter set, learning a new task can interfere with capabilities acquired earlier. An alternative is to treat acquired capabilities as persistent skills and to make an explicit acquisition decision: reuse a skill when it already solves the target, clone a useful parent and adapt the copy when prior knowledge may help, or fall back to scratch learning when prior knowledge is unsuitable.
 
-This work studies that mechanism as a controlled research prototype. The goal is not to claim a universal theory of prerequisites or a universal advantage for cloning. Instead, the experiments ask when previously acquired skills help, when they do not, whether parent identity contributes beyond generic pretraining, whether transfer depends on the task distribution, and whether the proposed isolated-skill mechanism preserves earlier skills during subsequent acquisition.
+The key question studied here is therefore narrower and more testable than whether skill reuse is universally beneficial: **when does previously acquired knowledge help with a new skill, when does it hurt, and does the identity of the reused parent matter?** This question matters because a continual learner that always reuses prior knowledge can suffer negative transfer, while a learner that always starts from scratch discards potentially useful information. A useful acquisition mechanism should preserve all three options and make their consequences measurable.
 
-The research is organized around five questions:
+We study this question in a deliberately small and controlled experimental setting. The task family consists of arithmetic regression problems with a common input/output structure, and the model is a two-input, one-output neural network with a 32-unit hidden layer. This simplicity is intentional: it allows the source-target relationship, acquisition route, training budget, seed, and data distribution to be controlled independently, making it possible to distinguish several effects that would be confounded in a large benchmark. The results should therefore be read as a controlled study of transfer dynamics, not as evidence that the same behavior must hold across arbitrary architectures or application domains.
 
-1. Can a new target skill be acquired reliably?
-2. Can an already-solved target be reused without additional training?
-3. When reuse is not possible, does cloning provide a useful initialization compared with scratch learning?
-4. Does the benefit of cloning depend on which previously acquired parent is selected?
-5. Does transfer remain stable when the operand distribution is expanded to include signed values?
+The framework evaluates three acquisition routes. **Reuse** keeps an existing skill unchanged when independent evidence indicates that it already solves the target. **Clone-and-adapt** copies a selected parent and trains the copy on the new task, leaving the stored parent intact. **Scratch** starts from a fresh initialization. This design makes it possible to ask not merely whether pretraining helps, but whether a particular previously acquired skill provides a better initialization than another one.
+
+The experiments are organized around five questions:
+
+1. **Acquisition reliability:** Can a new target skill be acquired within the declared budget, and how does reliability vary across targets and prior histories?
+2. **Reuse:** Can an already-solved target be recognized and reused without additional optimization?
+3. **Clone versus scratch:** When reuse is insufficient, does cloning reduce the training cost of acquiring a new skill compared with a fresh initialization?
+4. **Parent identity:** Does the benefit of cloning depend on which previously acquired skill supplies the initialization, beyond the generic effect of pretraining?
+5. **Domain sensitivity:** Does observed transfer remain stable when the operand distribution is expanded from non-negative to signed values?
+
+These questions are answered with matched deterministic seeds, explicit separation of training, compatibility, calibration, and held-out evaluation data, a three-arm parent-control experiment, and an explicit signed-domain follow-up. The resulting evidence is intentionally interpreted as conditional on the tested protocol. The main conclusion is not that cloning always helps, nor that prior skills constitute universal prerequisites. Rather, the experiments show that transfer is heterogeneous, that parent identity can matter beyond generic pretraining, and that the direction and magnitude of transfer can change with the task distribution.
 
 ## 2. Experimental system
 
