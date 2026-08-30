@@ -4,12 +4,12 @@ These tables are intended as the compact statistical presentation for the final 
 
 ## Table 1 — Relatedness-pair acquisition
 
-| Source → target           | Mean frozen compatibility | Mean paired speedup (scratch / clone) | Paired p-value | Interpretation                                    |
-| ------------------------- | ------------------------: | ------------------------------------: | -------------: | ------------------------------------------------- |
-| Multiplication → Squares  |                     0.001 |                                 1.26× |       3.9×10⁻⁹ | Positive transfer despite low frozen-output score |
-| Multiplication → Powers   |                     0.915 |                                 2.31× |      6.0×10⁻¹¹ | Strong positive transfer                          |
-| Addition → Subtraction    |                     0.156 |                                 0.33× |      2.3×10⁻¹² | Negative transfer                                 |
-| Addition → Multiplication |                     0.005 |                                 1.12× |          0.013 | Small positive control effect                     |
+| Source → target | Mean frozen compatibility | Mean paired speedup (scratch / clone) | Paired p-value | Interpretation |
+|---|---:|---:|---:|---|
+| Multiplication → Squares | 0.001 | 1.26× | 3.9×10⁻⁹ | Positive transfer despite low frozen-output score |
+| Multiplication → Powers | 0.915 | 2.31× | 6.0×10⁻¹¹ | Strong positive transfer |
+| Addition → Subtraction | 0.156 | 0.33× | 2.3×10⁻¹² | Negative transfer |
+| Addition → Multiplication | 0.005 | 1.12× | 0.013 | Small positive control effect |
 
 **Historical-result note:** Table 1 summarizes the earlier source→target analysis. The pre-fix Powers generalization result associated with the false-reuse controller is superseded and is not represented by this table's speedup statistic.
 
@@ -19,37 +19,33 @@ The table demonstrates why compatibility score should not be interpreted as a co
 
 The expanded experiment holds the target fixed while varying the prior-skill history. This separates the effect of relevant prior knowledge from the mere presence of additional training history.
 
-| Target      |                         No prior skill |                          Addition only |              Addition + Multiplication |
-| ----------- | -------------------------------------: | -------------------------------------: | -------------------------------------: |
-| Subtraction |  33.5 budgeted target-adaptation steps |  62.3 budgeted target-adaptation steps |  73.2 budgeted target-adaptation steps |
-| Division    | 515.2 budgeted target-adaptation steps | 616.2 budgeted target-adaptation steps | 617.5 budgeted target-adaptation steps |
-| Squares     |                          20.0% success |                          20.0% success |                          13.3% success |
-| Powers      | 471.6 budgeted target-adaptation steps | 355.2 budgeted target-adaptation steps | 237.3 budgeted target-adaptation steps |
+| Target | No prior skill | Addition only | Addition + Multiplication |
+|---|---:|---:|---:|
+| Subtraction | 33.5 budgeted target-adaptation steps | 62.3 budgeted target-adaptation steps | 73.2 budgeted target-adaptation steps |
+| Division | 515.2 budgeted target-adaptation steps | 616.2 budgeted target-adaptation steps | 617.5 budgeted target-adaptation steps |
+| Squares | 20.0% success | 20.0% success | 13.3% success |
+| Powers | 471.6 budgeted target-adaptation steps | 355.2 budgeted target-adaptation steps | 237.3 budgeted target-adaptation steps |
 
 For subtraction, division, and powers, the values are **mean budgeted target-adaptation steps across the valid 15-seed histories**, with an unsuccessful target acquisition assigned the full 1500-step target budget. They are therefore not mean convergence times among successful runs.
 
-If a requested prerequisite fails, that history is marked invalid and the failed prerequisite is never exposed to the controller as an acquired skill; target metrics are not computed for that seed.
-
-Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
+If a requested prerequisite fails, that history is marked invalid and the failed prerequisite is never exposed to the controller as an acquired skill; target metrics are not computed for that seed. Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
 
 The results show heterogeneous transfer: additional prior skills substantially help powers, while division exhibits negative transfer and squares remains difficult. These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
 
 ## Table 3 — Retention mechanism check
 
-| Quantity                         | Experimental definition                     | Reported result              |                     |     |
-| -------------------------------- | ------------------------------------------- | ---------------------------- | ------------------- | --- |
-| Seeds per sequence               | Matched deterministic seeds                 | 15                           |                     |     |
-| Sequences                        | Representative 3-skill arithmetic sequences | 4                            |                     |     |
-| Evaluation set                   | Stable, skill-specific held-out set         | 300 examples / check         |                     |     |
-| Practical retention tolerance    | Maximum diagnostic accuracy loss            | 5 percentage points          |                     |     |
-| Repeated-check mean delta        | Post accuracy − pre accuracy                | 0.0000 in reported checks    |                     |     |
-| Maximum absolute accuracy change | max(                                        | post accuracy − pre accuracy | ) across all checks | 0.0 |
-| All deltas exactly zero          | Whether every check landed at exactly 0.0   | True                         |                     |     |
-| Retention pass rate              | Fraction with delta ≥ −0.05                 | 100%                         |                     |     |
+| Quantity | Experimental definition | Reported result |
+|---|---|---|
+| Seeds per sequence | Matched deterministic seeds | 15 |
+| Sequences | Representative 3-skill arithmetic sequences | 4 |
+| Evaluation set | Stable, skill-specific held-out set | 300 examples / check |
+| Practical retention tolerance | Maximum diagnostic accuracy loss | 5 percentage points |
+| Repeated-check mean delta | Post accuracy − pre accuracy | 0.0000 in reported checks |
+| Maximum absolute accuracy change | max(|post accuracy − pre accuracy|) across all checks | 0.0 |
+| All deltas exactly zero | Whether every check landed at exactly 0.0 | True |
+| Retention pass rate | Fraction with delta ≥ −0.05 | 100% |
 
-**Interpretation:** these zero-change checks are consistent with the isolated-skill invariant: the stored parent network is not modified during later skill acquisition, and the same network is evaluated on the same retention set.
-
-They are therefore an **implementation/mechanism check, not a statistical demonstration that the system is robust to catastrophic forgetting**. In the current architecture, the stored parent parameters cannot be changed by later acquisition, so a zero accuracy change is expected by construction.
+**Interpretation:** these zero-change checks are consistent with the isolated-skill invariant: the stored parent network is not modified during later skill acquisition, and the same network is evaluated on the same retention set. They are therefore an **implementation/mechanism check, not a statistical demonstration that the system is robust to catastrophic forgetting**.
 
 Bootstrap confidence intervals and effect sizes for this quantity are intentionally not presented as evidence of an interference effect. A genuine empirical retention experiment would require a comparison arm in which later learning can actually modify parameters supporting earlier skills, such as a shared-parameter baseline.
 
@@ -59,27 +55,31 @@ The signed-domain follow-up compares the original non-negative operand domain wi
 
 ### Speedup by pair
 
-Speedup is defined as scratch epochs divided by clone epochs. Values are reported as mean ± standard deviation.
+Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size.
 
-| Pair                                     | Non-negative speedup | Signed speedup | Paired difference (non-negative − signed) | Paired t-test p | Direction reversed?                 |
-| ---------------------------------------- | -------------------: | -------------: | ----------------------------------------: | --------------: | ----------------------------------- |
-| multiplication → powers                  |        2.173 ± 0.530 |  0.719 ± 0.177 |                             1.455 ± 0.541 |        5.6×10⁻⁸ | **Yes**                             |
-| multiplication → squares                 |        1.225 ± 0.178 |  1.010 ± 0.040 |                             0.215 ± 0.150 |        7.0×10⁻⁵ | No — erodes toward null             |
-| addition → subtraction                   |        0.408 ± 0.100 |  1.001 ± 0.224 |                            −0.594 ± 0.243 |        1.9×10⁻⁷ | Yes — negative transfer neutralizes |
-| addition → multiplication (null control) |        1.145 ± 0.138 |  1.176 ± 0.128 |                            −0.031 ± 0.218 |     0.59 (n.s.) | No                                  |
+| Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative − signed) | Paired t-test p | Direction reversed? |
+|---|---:|---:|---:|---:|---:|---|
+| multiplication → powers | 5/15 | 2.217 ± 0.530 | 0.703 ± 0.141 | 1.514 ± 0.451 | 0.00168 | **Yes** |
+| multiplication → squares | 5/15 | 1.265 ± 0.178 | 1.031 ± 0.069 | 0.235 ± 0.220 | 0.0757 | No — erodes toward null |
+| addition → subtraction | 15/15 | 0.408 ± 0.100 | 1.001 ± 0.224 | −0.594 ± 0.243 | 1.88×10⁻⁷ | Yes — negative transfer neutralizes |
+| addition → multiplication (null control) | 15/15 | 1.145 ± 0.138 | 1.176 ± 0.128 | −0.031 ± 0.218 | 0.591 | No |
+
+The powers and squares comparisons have only **5/15 valid matched seeds** because the signed-domain multiplication prerequisite failed acquisition in 10 seeds. The 10 failed seeds are not silently treated as zero or full-budget speedups and are excluded from the paired speedup test. This attrition is itself reported as part of the signed-domain result.
+
+The multiplication → powers comparison remains statistically different under the paired test (`p=0.00168`) and reverses direction. For multiplication → squares, the current paired comparison is **not conventionally statistically significant** (`p=0.0757`); the appropriate conclusion is that the observed positive transfer erodes toward no effect, not that a statistically significant domain difference has been established.
 
 ### Acquisition success rate
 
-For the fixed-target prerequisite-history matrix, squares' success rate drops from **13.3–20.0%** in the non-negative domain to **0.0%** in the signed domain across all three prior-skill histories.
+For the fixed-target prerequisite-history matrix, squares' success rate is 20.0%, 20.0%, and 13.3% across the three non-negative prior histories, versus exactly 0.0% in the corresponding signed-domain histories.
 
-Subtraction, division, and powers remain at 100% success in both domains.
+Subtraction, division, and powers remain at 100% target-acquisition success in the histories that are valid for the target attempt. Some signed-domain histories have prerequisite-acquisition failures and are therefore marked invalid rather than treated as target failures.
 
 ### Compatibility-score domain sensitivity
 
 Division's frozen compatibility score against an addition parent changes substantially with the domain:
 
 * **Non-negative domain:** approximately 0.28–0.31, above `τ_clone = 0.15`; the controller chooses clone in 15/15 seeds.
-* **Signed domain:** approximately 0.03–0.06, below `τ_clone`; the controller switches to scratch in 14–15/15 seeds.
+* **Signed domain:** approximately 0.03–0.06, below `τ_clone`; the controller switches toward scratch in 14–15/15 seeds.
 
 Thus, the controller's own decision inputs are domain-sensitive, not only the resulting transfer outcome.
 
@@ -87,25 +87,19 @@ Thus, the controller's own decision inputs are domain-sensitive, not only the re
 
 The following diagnostics are from the signed-domain trained clone network, evaluated on held-out examples at ±0.5 tolerance.
 
-| Pair                     | Quadrant                     | Mean absolute error | Accuracy |
-| ------------------------ | ---------------------------- | ------------------: | -------: |
-| multiplication → powers  | positive base                |               0.230 |    93.2% |
-| multiplication → powers  | negative base, even exponent |               0.410 |    75.4% |
-| multiplication → powers  | negative base, odd exponent  |               0.890 |    67.0% |
-| multiplication → squares | positive base                |               0.486 |    67.4% |
-| multiplication → squares | negative base                |               0.489 |    69.7% |
-| addition → subtraction   | same-sign, (+,+)             |               0.220 |    94.9% |
-| addition → subtraction   | same-sign, (-,-)             |               0.206 |    96.7% |
-| addition → subtraction   | mixed-sign, (+,-)            |               0.455 |    70.6% |
-| addition → subtraction   | mixed-sign, (-,+)            |               0.458 |    71.0% |
+| Pair | Quadrant | Mean absolute error | Accuracy |
+|---|---|---:|---:|
+| multiplication → powers | positive base | 0.230 | 93.2% |
+| multiplication → powers | negative base, even exponent | 0.410 | 75.4% |
+| multiplication → powers | negative base, odd exponent | 0.890 | 67.0% |
+| multiplication → squares | positive base | 0.486 | 67.4% |
+| multiplication → squares | negative base | 0.489 | 69.7% |
+| addition → subtraction | same-sign, (+,+) | 0.220 | 94.9% |
+| addition → subtraction | same-sign, (-,-) | 0.206 | 96.7% |
+| addition → subtraction | mixed-sign, (+,-) | 0.455 | 70.6% |
+| addition → subtraction | mixed-sign, (-,+) | 0.458 | 71.0% |
 
-These breakdowns are **diagnostic, not causal proof**. They show patterns consistent with the observed domain effects:
-
-* negative-base/odd-exponent cases are particularly difficult for multiplication → powers;
-* mixed-sign inputs are harder than same-sign inputs for addition → subtraction;
-* multiplication → squares shows little sign asymmetry, consistent with squares being sign-invariant.
-
-The results therefore support the narrower conclusion that transfer can be domain/distribution-sensitive for this system, rather than establishing a universal causal effect of negative numbers.
+These breakdowns are **diagnostic, not causal proof**. They show patterns consistent with the observed domain effects rather than establishing the mechanism definitively.
 
 Full per-seed data are available in:
 
@@ -115,15 +109,15 @@ Full per-seed data are available in:
 
 ## Table 4 — Main claim boundaries
 
-| Supported by the experiments                                                                                    | Not established by the experiments                                                                                 |
-| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Skills can be stored independently, and the implementation's isolation guarantee is confirmed to hold in code.  | Universal absence of catastrophic forgetting — no interference-risking baseline was tested in the isolation check. |
-| Reuse, clone-and-adapt, and scratch are all useful acquisition routes.                                          | Universal superiority of cloning.                                                                                  |
-| Transfer can be positive or negative depending on the source-target pair.                                       | A universal prerequisite hierarchy.                                                                                |
-| Frozen compatibility score alone does not fully predict transfer benefit.                                       | Generalization to large models or arbitrary domains.                                                               |
-| Matched-seed evaluation can separate acquisition reliability, efficiency, and mechanism-level retention checks. | An empirical retention result under conditions where interference is possible.                                     |
-| Transfer behavior can be sensitive to the operand domain/distribution for the tested task pairs.                | That negative numbers specifically, independent of distribution shift, cause the observed changes.                 |
-| The signed-domain null control remains statistically stable under the tested manipulation.                      | Robustness to unrelated types of distribution shift or broader task families.                                      |
+| Supported by the experiments | Not established by the experiments |
+|---|---|
+| Skills can be stored independently, and the implementation's isolation guarantee is confirmed to hold in code. | Universal absence of catastrophic forgetting — no interference-risking baseline was tested in the isolation check. |
+| Reuse, clone-and-adapt, and scratch are all useful acquisition routes. | Universal superiority of cloning. |
+| Transfer can be positive or negative depending on the source-target pair. | A universal prerequisite hierarchy. |
+| Frozen compatibility score alone does not fully predict transfer benefit. | Generalization to large models or arbitrary domains. |
+| Matched-seed evaluation can separate acquisition reliability, efficiency, and mechanism-level retention checks. | An empirical retention result under conditions where interference is possible. |
+| Transfer behavior can be sensitive to the operand domain/distribution for the tested task pairs. | That negative numbers specifically, independent of distribution shift, cause the observed changes. |
+| The signed-domain null control remains statistically stable under the tested manipulation. | Robustness to unrelated types of distribution shift or broader task families. |
 
 ## Historical-result note
 
