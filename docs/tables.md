@@ -22,11 +22,11 @@ The expanded experiment holds the target fixed while varying the prior-skill his
 | Target | No prior skill | Addition only | Addition + Multiplication |
 |---|---:|---:|---:|
 | Subtraction | 33.5 budgeted target-adaptation steps | 62.3 budgeted target-adaptation steps | 73.2 budgeted target-adaptation steps |
-| Division | 515.2 budgeted target-adaptation steps | 616.2 budgeted target-adaptation steps | 617.5 budgeted target-adaptation steps |
+| Division | 515.2 budgeted target-adaptation steps | 616.2 budgeted target-adaptation steps | **621.8 budgeted target-adaptation steps** |
 | Squares | 20.0% success | 20.0% success | 13.3% success |
 | Powers | 471.6 budgeted target-adaptation steps | 355.2 budgeted target-adaptation steps | 237.3 budgeted target-adaptation steps |
 
-For subtraction, division, and powers, the values are **mean budgeted target-adaptation steps across the valid 15-seed histories**, with an unsuccessful target acquisition assigned the full 1500-step target budget. They are therefore not mean convergence times among successful runs.
+For subtraction, division, and powers, the values are **mean budgeted target-adaptation steps among the 15 nominal seeds whose prerequisite history was valid**. If the target itself is attempted but does not reach the acquisition criterion, its `adaptation_steps` value is the full 1500-epoch budget and is included in the mean. A seed whose prerequisite history is invalid is excluded from the target metric because the target was never attempted. These values are therefore budgeted acquisition cost, not mean convergence time among successful target acquisitions.
 
 If a requested prerequisite fails, that history is marked invalid and the failed prerequisite is never exposed to the controller as an acquired skill; target metrics are not computed for that seed. Squares is reported as success rate because only a small minority of runs reach the acquisition criterion within the allowed budget.
 
@@ -55,7 +55,7 @@ The signed-domain follow-up compares the original non-negative operand domain wi
 
 ### Speedup by pair
 
-Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size.
+Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size. Runs that fail to reach the target criterion contribute the declared 1500-epoch cap to the epoch ratio; therefore these ratios are budget-capped training-cost comparisons rather than convergence-time comparisons restricted to successful runs.
 
 | Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative − signed) | Paired t-test p | Direction reversed? |
 |---|---:|---:|---:|---:|---:|---|
@@ -64,7 +64,7 @@ Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons
 | addition → subtraction | 15/15 | 0.408 ± 0.100 | 1.001 ± 0.224 | −0.594 ± 0.243 | 1.88×10⁻⁷ | Yes — negative transfer neutralizes |
 | addition → multiplication (null control) | 15/15 | 1.145 ± 0.138 | 1.176 ± 0.128 | −0.031 ± 0.218 | 0.591 | No |
 
-The powers and squares comparisons have only **5/15 valid matched seeds** because the signed-domain multiplication prerequisite failed acquisition in 10 seeds. The 10 failed seeds are not silently treated as zero or full-budget speedups and are excluded from the paired speedup test. This attrition is itself reported as part of the signed-domain result.
+The powers and squares comparisons have only **5/15 valid matched seeds** because the signed-domain multiplication prerequisite failed acquisition in 10 seeds. The 10 failed seeds are not silently treated as zero or full-budget source-acquisition speedups and are excluded from the paired speedup test. This attrition is itself reported as part of the signed-domain result.
 
 The multiplication → powers comparison remains statistically different under the paired test (`p=0.00168`) and reverses direction. For multiplication → squares, the current paired comparison is **not conventionally statistically significant** (`p=0.0757`); the appropriate conclusion is that the observed positive transfer erodes toward no effect, not that a statistically significant domain difference has been established.
 
