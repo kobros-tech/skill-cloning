@@ -1,178 +1,82 @@
 # Continual Skill Learning via Skill Cloning — Minimal Prototype
 
-Implementation of the design proposed in [kobros-tech/6.86x#23](https://github.com/kobros-tech/6.86x/issues/23):
-protect learned "skills" (small parametric units) from catastrophic forgetting by
-reusing, cloning, or freshly initializing a skill depending on a compatibility
-score against the incoming task, rather than always updating one shared set of
-parameters.
+Implementation of a controlled prototype for continual skill acquisition. For an incoming task, the system can reuse an existing solved skill, clone a useful skill and adapt it, or learn from scratch. The experiments focus on acquisition reliability and transfer efficiency; a separate check confirms the implementation's skill-isolation guarantee holds (see the note below -- this is a code invariant, not a statistical retention experiment).
 
-This repo covers Phases 1–4 of the issue's implementation plan (mathematical
-specification → minimal implementation → baselines → evaluation), run on the
-Section 8 curriculum: **addition → subtraction → multiplication → powers**.
+The current research plan is tracked in [Issue #3](https://github.com/kobros-tech/skill-cloning/issues/3). The final paper draft is in [`docs/final_paper.md`](docs/final_paper.md), with compact publication tables in [`docs/tables.md`](docs/tables.md).
 
-See **[results/report.md](results/report.md)** for the full write-up: methodology,
-design choices made where the issue left things open, plots, and statistics.
+## Main findings
+
+- Prior knowledge can produce positive, negligible, or negative transfer depending on the source-target pair; cloning is not universally beneficial.
+- Earlier relatedness-pair experiments show approximately 2.31× speedup for multiplication → powers, 1.26× for multiplication → squares, and negative transfer (0.33×) for addition → subtraction.
+- **A signed-domain follow-up shows this transfer behavior is itself distribution-sensitive, not a fixed property of a source-target pair.** Expanding the operand domain from non-negative (`{0,...,9}`) to signed (`{-9,...,9}`) integers, under matched seeds and an otherwise identical protocol, **reversed** the multiplication → powers result (2.17× → 0.72×, p=5.6×10⁻⁸) and eroded multiplication → squares toward no effect (1.23× → 1.01×, p=7.0×10⁻⁵), while a null-control pair (addition → multiplication) stayed stable (p=0.59) -- ruling out "the manipulation itself always changes results" as an explanation. Squares' already-low acquisition success rate also collapsed from 13-20% to exactly 0% in the signed domain. See `docs/final_paper.md` Section 4.4 and `docs/tables.md` Table 3.5 for the full analysis, including a sign-specific diagnostic breakdown.
+- A corrected reuse gate requires both compatibility evidence and independent target-solve accuracy, preventing a merely related but unsolved skill from being treated as a zero-training solution.
+- A skill-isolation invariant check confirms the implementation never modifies a previously acquired skill's stored parameters: every recorded accuracy change is exactly 0.0, for every seed and sequence. This is a **code-correctness/regression property confirmed to hold**, not a statistical retention experiment -- see the note below.
+
+## Final paper
+
+The final-paper PR is documentation and analysis only. It does not introduce a new learning algorithm. It organizes the existing evidence into:
+
+- abstract and research questions;
+- experimental setup and data separation;
+- acquisition and retention results;
+- statistical interpretation;
+- limitations and threats to validity;
+- reproducibility checklist;
+- publication-ready tables.
+
+See:
+
+- [`docs/final_paper.md`](docs/final_paper.md)
+- [`docs/tables.md`](docs/tables.md)
+- [`results/report.md`](results/report.md)
 
 ## Continuous integration
 
-Every push and pull request re-runs the full experiment from scratch
-(`.github/workflows/run-experiment.yml`) and prints the report and every
-statistics table directly onto the workflow run's **Summary** page, so results
-are visible in GitHub without downloading anything. Plots and CSVs are also
-uploaded as a downloadable `experiment-results` artifact on each run.
+Every push and pull request re-runs the experiment suite and regression tests through `.github/workflows/run-experiment.yml`. The workflow prints the report and statistics tables to the GitHub Actions Summary and uploads generated CSV/plot artifacts.
 
-## Quick summary of findings
+## Skill-isolation invariant check (not a statistical retention experiment)
 
-- Catastrophic forgetting is real and large in the shared-network baseline
-  (MSE on old tasks grows 3–4 orders of magnitude); clone-and-adapt eliminates it
-  (p < 10⁻⁹ on 3 of 4 tasks, paired by seed).
-- Clone-and-adapt's convergence speedup is relatedness-dependent in the original
-  experiment: 5.1× faster when cloning from a closely related skill (powers ←
-  multiplication), but slower than random init when the parent is only weakly
-  related (subtraction ← addition).
-- The fixed-budget follow-up shows that the original powers generalization gap
-  largely disappears at equal training budgets, so the original stopping-rule
-  comparison was confounded.
-- Independent review also identified a more fundamental controller issue:
-  `τ_solve=0.90` can classify a merely related but unsolved task as `reuse`.
-  PR #2 therefore audits/calibrates this decision rule before broader task-pair
-  experiments are added.
+`experiments/retention.py` runs sequential skill acquisition and re-evaluates every previously acquired skill after each later acquisition, on a stable, deterministic evaluation set per skill.
 
-## Stopping-rule confound follow-up
-
-The original Phase 4 convergence metric stops each run when training accuracy
-reaches 85%. Because a clone may reach that threshold earlier than a scratch
-model, comparing held-out MSE at the stopping point can mix two effects:
-initialization quality and training duration.
-
-`experiments/stopping_rule_confound.py` provides a controlled follow-up for the
-powers ← multiplication experiment. It records the original 85%-accuracy stopping
-outcome, then re-runs clone and scratch from the same initial states at identical,
-predeclared training budgets. Validation and test MSE are measured at every
-budget without using the test set to choose a budget.
+**Read this before citing this experiment's numbers:** in the current architecture, a `Skill`'s stored network is never modified once training on it stops, and each check re-evaluates the identical frozen network on the identical evaluation batch before and after. That means the recorded accuracy change is exactly 0.0 by mathematical construction, not by empirical result -- there is no code path here through which it could come out otherwise. A bootstrap confidence interval or effect size over that quantity would misrepresent zero sampling variance as a statistical finding, so this file does not compute either. What it does verify, legitimately, is an **implementation invariant**: that no bug lets a later acquisition's gradient updates leak into a supposedly frozen skill. That's a real and useful regression check on the code, not evidence that catastrophic forgetting is absent in continual-learning systems generally. A genuine empirical retention result would need a baseline where interference is actually possible (e.g. extending `results/report.md`'s original shared-network comparison to this experiment's task sequences) -- noted as future work, not implemented here.
 
 Outputs:
 
-- `results/stopping_rule_confound.csv` — per-seed, per-budget raw results.
-- `results/stopping_rule_confound_summary.csv` — mean/std/min/max summaries.
-- `results/stopping_rule_confound_stopping_epochs.csv` — original stopping-rule
-  epochs for clone vs scratch.
+- `results/retention.csv` — per-seed diagnostics.
+- `results/retention_summary.csv` — aggregate summary, including `max_absolute_retention_delta` and `all_deltas_exactly_zero` (both of which should be `0.0`/`True` for every row -- a violation would indicate a real bug).
+- `results/plot_retention.png` — pre/post accuracy per check (points overlap exactly, by construction).
+
+The check uses 15 seeds per representative sequence and a five-percentage-point tolerance retained as a sanity bound, not a statistical margin.
 
 Run it with:
 
 ```bash
-python experiments/stopping_rule_confound.py
-```
-
-This follow-up is deliberately diagnostic: it separates training-budget effects
-from initialization effects.
-
-## Squares relatedness follow-up
-
-`experiments/squares_relatedness.py` tests cloning from **multiplication → squares**
-against a scratch initialization. The squares task maps `(a, b)` to `a²` while
-retaining the same two-input model interface.
-
-The experiment measures convergence speed to the existing 85%-training-accuracy
-threshold and does not use a test set to select a stopping budget. Across the
-original 15 seeds it provides an additional observation consistent with transfer
-from a structurally related parent.
-
-Outputs:
-
-- `results/squares_relatedness.csv` — per-seed convergence results.
-- `results/squares_relatedness_summary.csv` — aggregate convergence and paired
-  scratch/clone speedup statistics.
-
-Run it with:
-
-```bash
-python experiments/squares_relatedness.py
-```
-
-## Compatibility decision-rule calibration
-
-`experiments/compatibility_calibration.py` audits the original compatibility
-controller before more task pairs are added. The original `τ_solve` rule used a
-high frozen-skill compatibility score as sufficient evidence for zero-training
-`reuse`. This is not necessarily valid: a related task can have a high score
-without already being solved.
-
-The calibration experiment trains skills on the existing source tasks, evaluates
-every source → target pair, and records:
-
-- frozen compatibility score on the compatibility probe;
-- accuracy and MSE on an independent calibration batch;
-- whether the target is actually solved under the predeclared 85%-accuracy rule;
-- whether the original `τ_solve` would have selected `reuse`;
-- false-reuse decisions;
-- a calibration-only recommended score threshold.
-
-No held-out test data are used to select the threshold. The controller itself is
-also hardened so `reuse` requires both the compatibility threshold and the
-independent solved-task accuracy criterion.
-
-Outputs:
-
-- `results/compatibility_calibration.csv` — per-seed, per-source/target diagnostics.
-- `results/compatibility_calibration_summary.csv` — original vs calibration-only
-  threshold and false-reuse counts.
-
-Run it with:
-
-```bash
-python experiments/compatibility_calibration.py
-```
-
-Regression tests cover the key failure mode: a high compatibility score with
-insufficient target accuracy must not trigger zero-training reuse.
-
-## Repo structure
-
-```
-.
-├── .github/workflows/run-experiment.yml   # CI: reruns everything, prints results to the run summary
-├── run_all.py          # reproduces everything end to end
-├── requirements.txt
-├── src/
-│   ├── skill.py         # TinyMLP skill representation + clone() (Section 5)
-│   ├── tasks.py          # addition/subtraction/multiplication/powers/squares task generators
-│   ├── compatibility.py  # P(T|s_i) definition + reuse/clone/scratch decision rule
-│   ├── strategies.py     # 3 training strategies: shared, independent scratch, clone-and-adapt
-│   ├── experiment.py     # runs all three strategies across seeds (Phase 4 driver)
-│   ├── analysis.py       # paired statistical tests (Phase 4 evaluation)
-│   ├── make_plots.py     # generates results/plot_*.png
-│   └── print_summary.py  # formats report + stats tables as markdown for the CI job summary
-├── experiments/
-│   ├── stopping_rule_confound.py      # fixed-budget confound follow-up
-│   ├── squares_relatedness.py         # multiplication → squares relatedness follow-up
-│   └── compatibility_calibration.py   # compatibility/reuse decision calibration
-├── tests/
-│   └── test_compatibility.py          # regression tests for false reuse
-└── results/
-    ├── report.md          # full write-up
-    ├── plot_*.png          # figures
-    ├── final.csv, convergence.csv, params.csv   # raw per-seed results
-    └── t_*.csv, *_summary.csv                    # statistical test + summary tables
-```
-
-## Reproducing
-
-```bash
-pip install -r requirements.txt
-python run_all.py
-python experiments/stopping_rule_confound.py
-python experiments/squares_relatedness.py
-python experiments/compatibility_calibration.py
+python experiments/retention.py
 python -m unittest discover -s tests -v
 ```
 
-These commands regenerate the experiment CSVs, statistics, and calibration
-diagnostics. The project remains dependency-light: numpy/pandas on CPU, no GPU
-or deep-learning framework required.
+## Signed-domain transfer-robustness experiment
 
-## Status
+`experiments/signed_domain_transfer.py` reruns the four load-bearing relatedness pairs and the fixed-target prerequisite-history matrix under two domains -- the existing non-negative domain (`{0,...,9}`-scale ranges, `tasks.py`'s default, unchanged and byte-identical to every prior result) and a new signed domain (`{-9,...,9}`-scale ranges; powers' exponent stays non-negative to avoid confounding sign with fractional targets; division's divisor is nonzero by construction in both domains). Every comparison is paired by seed. Only the operand domain changes -- architecture, optimizer, learning rate, stopping criterion, training budget, seed protocol, and the compatibility/controller logic are identical to the non-negative baseline.
 
-Research hypothesis / design proposal — exploratory, not a claim of novelty
-(see the issue for the full framing). This prototype is meant to test the
-mechanism, not to be a finished system.
+**Headline result: transfer is not uniformly robust to this domain expansion.** multiplication → powers reverses direction (2.17× → 0.72×); multiplication → squares erodes toward no effect (1.23× → 1.01×); addition → subtraction's negative transfer neutralizes (0.41× → 1.00×); the null control (addition → multiplication) stays stable (1.15× → 1.18×, not significant), which is itself evidence the other three changes are real rather than an artifact of the domain change alone. Squares' acquisition success rate collapses from an already-low 13-20% to exactly 0%. See `docs/final_paper.md` Section 4.4 for the full analysis, including sign-specific diagnostics that offer a plausible (not proven) mechanism for each effect.
+
+This finding should be read narrowly: it establishes that transfer *can* be domain-sensitive for this system on this specific expansion, not that it always is, nor that "negative numbers" are the cause independent of the accompanying distribution shift (expanding `{0,...,9}` to `{-9,...,9}` changes more than sign -- see the limitations note in `docs/final_paper.md`).
+
+Outputs:
+
+- `results/signed_domain_pairs.csv`, `results/signed_domain_pairs_summary.csv`, `results/signed_domain_pairs_comparison.csv` — per-seed and summary results for the four relatedness pairs, both domains.
+- `results/signed_domain_history.csv`, `results/signed_domain_history_summary.csv` — the prerequisite-history matrix, both domains.
+- `results/signed_domain_sign_breakdown.csv` — sign-specific diagnostic breakdown for multiplication→powers, multiplication→squares, and addition→subtraction.
+- `results/plot_signed_domain_speedup.png`, `results/plot_signed_domain_success_rate.png`, `results/plot_signed_domain_compatibility_vs_speedup.png`, `results/plot_signed_domain_convergence.png`.
+
+Run it with:
+
+```bash
+python experiments/signed_domain_transfer.py
+python -m unittest discover -s tests -v
+```
+
+## Reproducibility and scope
+
+The project remains intentionally small and dependency-light. Results are conditional on the tested task family, architecture, optimizer, controller, thresholds, seed count, and sequence length. They should be interpreted as evidence for the proposed mechanism in this controlled setting rather than as a universal claim about continual learning.

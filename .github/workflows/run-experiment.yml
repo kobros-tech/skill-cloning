@@ -29,6 +29,15 @@ jobs:
       - name: Run compatibility calibration
         run: python experiments/compatibility_calibration.py
 
+      - name: Run relatedness pairs experiment
+        run: python experiments/relatedness_pairs.py
+
+      - name: Run skill-isolation invariant check (retention)
+        run: python experiments/retention.py
+
+      - name: Run signed-domain transfer-robustness experiment
+        run: python experiments/signed_domain_transfer.py
+
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
 
