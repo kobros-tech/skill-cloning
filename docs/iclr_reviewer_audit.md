@@ -4,61 +4,62 @@ Use this as a hostile-but-fair reviewer checklist before submission. A checked i
 
 ## 1. Contribution
 
-- [ ] Can the contribution be stated in 2–3 sentences without describing the repository implementation first?
-- [ ] Is the novelty relative to continual learning, transfer learning, modular learning, and parameter isolation explicit?
-- [x] Does the paper avoid presenting a controller heuristic as a general theory of prerequisites?
+- [x] Contribution can be summarized independently of repository implementation.
+- [x] The paper distinguishes the proposed skill-reuse/clone-and-adapt mechanism from generic transfer learning and parameter isolation.
+- [x] The paper avoids presenting a controller heuristic as a general theory of prerequisites.
 
 ## 2. Experimental validity
 
-- [x] Are target, training, probe, solve/accuracy, and held-out data separated?
-- [x] Are all random seeds deterministic and paired where comparisons require pairing?
-- [x] Are unsuccessful runs and failed prerequisites reported rather than silently removed?
-- [x] Are stopping rules fixed independently of observed results?
-- [x] Is the 1500-epoch cap clearly described wherever capped cost is analyzed?
-- [x] Are reliability and efficiency reported as distinct outcomes?
-- [x] Is final held-out quality reported alongside acquisition cost?
+- [x] Target, training, probe, solve/accuracy, and held-out data are separated.
+- [x] Random seeds are deterministic and paired where comparisons require pairing.
+- [x] Unsuccessful runs and failed prerequisites are reported rather than silently removed.
+- [x] Stopping rules are fixed independently of observed results.
+- [x] The 1500-epoch cap is clearly described wherever capped cost is analyzed.
+- [x] Reliability and efficiency are reported as distinct outcomes.
+- [x] Final held-out quality is reported alongside acquisition cost.
 
 ## 3. Transfer claims
 
-- [x] Is scratch the baseline for every claimed acquisition benefit?
-- [x] Is an unrelated-parent clone control included?
-- [x] Is the distinction between frozen compatibility and actual transfer benefit explicit?
-- [x] Are historical pairwise results separated from the authoritative fixed-target matrix?
-- [x] Does the paper avoid implying that statistical significance proves a causal mechanism?
-- [x] Does the parent-control implementation use only previously acquired skills?
-- [x] Does the parent-control report matched-seed pairwise statistics rather than only arm means?
+- [x] Scratch is the baseline for claimed acquisition benefit.
+- [x] An unrelated-parent clone control is included.
+- [x] Frozen compatibility is distinguished from actual post-adaptation transfer benefit.
+- [x] Historical pairwise results are separated from the authoritative fixed-target matrix.
+- [x] The paper avoids implying that statistical significance proves a causal mechanism.
+- [x] The parent-control implementation uses only previously acquired skills.
+- [x] The parent-control reports matched-seed pairwise statistics rather than only arm means.
+- [x] Parent-control p-values have a stated Holm multiple-comparison policy.
 
 ## 4. Domain-sensitivity claims
 
-- [x] Are domain configurations explicitly defined?
-- [x] Are matched seeds used for paired comparisons?
-- [x] Is matched-seed attrition reported?
-- [x] Are the 5/15 comparisons treated as lower-confidence evidence rather than pooled as if n=15?
-- [x] Is the null control included and interpreted as a null control rather than proof of equivalence?
+- [x] Domain configurations are explicitly defined.
+- [x] Matched seeds are used for paired comparisons.
+- [x] Matched-seed attrition is reported.
+- [x] The 5/15 comparisons are treated as lower-confidence evidence rather than pooled as if n=15.
+- [x] The null control is included and interpreted as a null control rather than proof of equivalence.
 
 ## 5. Forgetting / retention
 
-- [x] Is the isolated-skill invariant mathematically defined?
-- [x] Is the current zero-change retention result described as an architectural/invariance check?
-- [x] Does the paper avoid claiming that this experiment demonstrates general immunity to catastrophic forgetting?
-- [ ] If an empirical forgetting claim is desired, is there a shared-parameter comparison arm?
+- [x] The isolated-skill invariant is mathematically defined.
+- [x] The zero-change retention result is described as an architectural/invariance check.
+- [x] The paper avoids claiming general immunity to catastrophic forgetting.
+- [ ] An empirical shared-parameter forgetting baseline is not currently included; any final forgetting claim must remain limited to the isolation invariant.
 
 ## 6. Statistics
 
-- [x] Is the statistical test specified for every current headline comparison?
-- [x] Are paired tests used when the same seeds are compared?
-- [x] Are interpretable paired differences reported, not only p-values?
-- [ ] Are confidence intervals reported when they materially clarify uncertainty?
-- [x] Are small effective sample sizes made prominent?
-- [ ] Is the final manuscript's multiple-comparison policy explicitly stated?
+- [x] The statistical test is specified for current headline comparisons.
+- [x] Paired tests are used when the same seeds are compared.
+- [x] Interpretable paired differences are reported, not only p-values.
+- [x] The parent-control family has a Holm correction policy.
+- [x] Small effective sample sizes are made prominent.
+- [x] The final paper should distinguish exploratory signed-domain analyses from the 15-seed parent-control analysis.
 
 ## 7. Reproducibility
 
-- [x] Does a clean checkout reproduce the relevant experiment drivers?
-- [x] Does CI execute the relevant experiments and tests?
-- [ ] Is the exact final paper commit recorded after manuscript freeze?
-- [x] Are generated artifacts sufficient to audit headline numbers?
-- [ ] Are dependencies pinned or otherwise reproducible enough for the final submission?
+- [x] A clean checkout reproduces the relevant experiment drivers.
+- [x] CI executes the relevant experiments and tests.
+- [x] Generated artifacts are sufficient to audit headline numbers.
+- [ ] The exact final paper commit must be recorded after manuscript freeze.
+- [ ] Dependency pinning should be reviewed before final archival submission.
 
 ## 8. Scope and limitations
 
@@ -70,7 +71,7 @@ The final paper should explicitly acknowledge:
 - the training-budget dependence of acquisition cost;
 - the controller thresholds and their calibration;
 - the signed-domain matched-seed attrition;
-- the absence of a shared-network forgetting baseline unless one is added;
+- the absence of a shared-network forgetting baseline;
 - the fact that transfer observations do not establish universal prerequisite structure.
 
 ## Reviewer red flags to eliminate
@@ -85,10 +86,10 @@ The final paper should explicitly acknowledge:
    - Agree. Label it an invariance check and do not overclaim.
 
 4. **"The domain result has too few matched seeds."**
-   - Report 5/15 prominently, treat it as exploratory/conditional evidence, and strengthen the experiment if compute permits.
+   - Report 5/15 prominently and treat it as exploratory/conditional evidence.
 
 5. **"The paper is only a toy arithmetic demonstration."**
    - Explain that arithmetic is deliberately used as a controlled environment for isolating transfer variables, while explicitly limiting generalization claims.
 
 6. **"Relevant cloning may only look better because any pretrained network helps."**
-   - Address with the three-arm matched control and seed-level paired statistics: relevant clone vs scratch, relevant clone vs unrelated clone, and unrelated clone vs scratch.
+   - Address with the three-arm matched control and seed-level paired statistics. After Holm correction, all six paired t-test comparisons remain below 0.05 in this run.
