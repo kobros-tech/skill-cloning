@@ -60,7 +60,7 @@ def main():
     ))
     parts.append(render_table(
         "retention_summary.csv",
-        "Skill retention: pre/post accuracy after new-skill acquisition",
+        "Skill-isolation invariant check (frozen-skill accuracy before/after later acquisitions — implementation check, not a statistical retention experiment)",
     ))
 
     print("\n".join(p for p in parts if p))

@@ -1,4 +1,4 @@
-"""Structural tests for the retention / catastrophic-forgetting experiment."""
+"""Structural tests for the skill-isolation invariant check."""
 from __future__ import annotations
 
 import sys
@@ -64,6 +64,24 @@ class RetentionTests(unittest.TestCase):
                 row.retention_delta >= -RETENTION_TOLERANCE,
             )
         self.assertLessEqual(checks["adaptation_steps"].max(), MAX_EPOCHS)
+
+    def test_isolation_invariant_holds_exactly(self):
+        """Later acquisitions must not change a stored skill's evaluation."""
+        rows = run_sequence(SEQUENCES[0], seed=0, sequence_index=0)
+        frame = pd.DataFrame(rows)
+        checks = frame[frame["is_retention_check"]]
+        self.assertTrue((checks["retention_delta"] == 0.0).all())
+
+    def test_summary_reports_invariant_not_inferential_statistics(self):
+        """Summary exposes direct invariant diagnostics, not CI/effect-size fields."""
+        rows = run_sequence(SEQUENCES[0], seed=0, sequence_index=0)
+        summary = summarize(pd.DataFrame(rows))
+        self.assertIn("all_deltas_exactly_zero", summary.columns)
+        self.assertIn("max_absolute_retention_delta", summary.columns)
+        self.assertNotIn("bootstrap_ci_low", summary.columns)
+        self.assertNotIn("bootstrap_ci_high", summary.columns)
+        self.assertNotIn("paired_effect_size", summary.columns)
+        self.assertTrue(summary["all_deltas_exactly_zero"].all())
 
 
 if __name__ == "__main__":

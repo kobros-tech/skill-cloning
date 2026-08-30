@@ -32,7 +32,7 @@ jobs:
       - name: Run relatedness pairs experiment
         run: python experiments/relatedness_pairs.py
 
-      - name: Run retention / catastrophic-forgetting experiment
+      - name: Run skill-isolation invariant check (retention)
         run: python experiments/retention.py
 
       - name: Run regression tests
