@@ -117,7 +117,7 @@ Full per-seed data are available in:
 | Frozen compatibility score alone does not fully predict transfer benefit. | Generalization to large models or arbitrary domains. |
 | Matched-seed evaluation can separate acquisition reliability, efficiency, and mechanism-level retention checks. | An empirical retention result under conditions where interference is possible. |
 | Transfer behavior can be sensitive to the operand domain/distribution for the tested task pairs. | That negative numbers specifically, independent of distribution shift, cause the observed changes. |
-| The signed-domain null control remains statistically stable under the tested manipulation. | Robustness to unrelated types of distribution shift or broader task families. |
+| No statistically detectable domain difference was observed for the signed-domain null control under the tested manipulation. | Robustness to unrelated types of distribution shift or broader task families. |
 
 ## Historical-result note
 
