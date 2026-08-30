@@ -55,7 +55,7 @@ The signed-domain follow-up compares the original non-negative operand domain wi
 
 ### Speedup by pair
 
-Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size. Runs that fail to reach the target criterion contribute the declared 1500-epoch cap to the epoch ratio; therefore these ratios are budget-capped training-cost comparisons rather than convergence-time comparisons restricted to successful runs.
+Speedup is defined as scratch epochs divided by clone epochs. Domain comparisons are paired by seed **only among seeds for which both domain conditions produced a valid source acquisition and therefore a valid clone/scratch pair**. The number of valid matched seeds is reported explicitly because source-acquisition failures reduce the paired sample size. Runs that fail to reach the target criterion contribute the declared 1500-epoch cap to the epoch ratio; therefore these ratios are budget-capped training-cost comparisons rather than convergence-time comparisons restricted to successful runs. The mean $\pm$ standard deviation values are descriptive summaries of per-seed speedup ratios; the paired $t$-test is performed on those per-seed ratios, not on the displayed summary values.
 
 | Pair | Valid matched seeds | Non-negative speedup | Signed speedup | Paired difference (non-negative $-$ signed) | Paired $t$-test $p$ | Direction reversed? |
 |---|---:|---:|---:|---:|---:|---|
