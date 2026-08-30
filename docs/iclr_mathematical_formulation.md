@@ -52,7 +52,7 @@ Thus $P(T\mid s_i)$ is a continuous similarity score derived from frozen mean-sq
 
 ## Controller rule
 
-Let $s^*$ denote the highest-scoring previously acquired skill and let
+Let $s_{\mathrm{best}}$ denote the highest-scoring previously acquired skill. Let
 
 $$
 \tau_{\mathrm{solve}}=0.90,
@@ -63,10 +63,10 @@ $$
 The controller selects the acquisition action according to
 
 $$
-a(T,s^*)=
+a(T,s_{\mathrm{best}})=
 \begin{cases}
-\mathrm{reuse} & \text{if } P(T\mid s^*)\geq\tau_{\mathrm{solve}} \text{ and } A(T,s^*)\geq0.85,\\
-\mathrm{clone} & \text{if } P(T\mid s^*)\geq\tau_{\mathrm{clone}} \text{ and the reuse condition is not satisfied},\\
+\mathrm{reuse} & \text{if } P(T\mid s_{\mathrm{best}})\geq\tau_{\mathrm{solve}} \text{ and } A(T,s_{\mathrm{best}})\geq0.85,\\
+\mathrm{clone} & \text{if } P(T\mid s_{\mathrm{best}})\geq\tau_{\mathrm{clone}} \text{ and the reuse condition is not satisfied},\\
 \mathrm{scratch} & \text{otherwise.}
 \end{cases}
 $$
@@ -74,7 +74,7 @@ $$
 When cloning is selected, the target is initialized from the parent's parameters:
 
 $$
-\theta_T^{(0)}=\theta_{s^*}.
+\theta_T^{(0)}=\theta_{s_{\mathrm{best}}}.
 $$
 
 For scratch learning, $\theta_T^{(0)}$ is independently initialized.
@@ -95,4 +95,5 @@ $$
 - Use braces for every multi-character superscript or subscript, for example `$s_i$`, `$\theta_i$`, and `$\tau_{\mathrm{solve}}$`.
 - Keep multiline environments completely inside the display block.
 - Avoid unsupported macros such as `\operatorname` and `\operatorname*`.
+- Avoid a literal `*` superscript in controller notation; use `$s_{\mathrm{best}}$` instead.
 - Use simple LaTeX commands such as `\mathrm{}` and `\mathop{}` for mathematical labels and operators.
