@@ -1,0 +1,11 @@
+artifact,source_csv,statistic_or_rule,status
+fixed_target_table,results/relatedness_pairs_summary.csv,mean_adaptation_steps and acquisition_success_rate by target/history,current-final-controller
+signed_domain_table,results/signed_domain_pairs_comparison.csv,paired per-seed speedup difference and paired t-test,current-final-controller
+signed_domain_domain_summary,results/signed_domain_pairs_summary.csv,domain-level clone/scratch/speedup summaries,current-final-controller
+signed_domain_sign_diagnostics,results/signed_domain_sign_breakdown.csv,per-seed quadrant MAE and accuracy; aggregate only by documented script,current-final-controller
+retention_table,results/retention_summary.csv,retention/isolation summary,current-final-controller
+retention_raw,results/retention.csv,per-check retention observations,current-final-controller
+compatibility_calibration,results/compatibility_calibration_summary.csv,threshold calibration summary,current-final-controller
+parent_control,results/unrelated_parent_control_stats.csv,matched parent-control statistics,current-final-controller
+stopping_rule,results/stopping_rule_confound_summary.csv,stopping-rule confound summary,current-final-controller
+historical_source_target,results/report.md,legacy source-to-target analysis,historical-not-publication-authority
