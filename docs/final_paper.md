@@ -2,19 +2,19 @@
 
 ## Abstract
 
-Continual learning requires deciding not only how to learn a new skill, but also whether previously acquired skills should be reused, adapted, or ignored. We study this problem with a controlled three-route framework that chooses among reuse, clone-and-adapt, and scratch learning. Using small arithmetic regression tasks, matched deterministic seeds, and separated training, probe, calibration, and evaluation data, we isolate acquisition reliability, transfer efficiency, parent identity, and distribution sensitivity.
+Continual learning requires deciding not only how to learn a new skill, but also whether previously acquired skills should be reused, adapted, or ignored. We study this problem with a controlled three-route framework that chooses among **reuse**, **clone-and-adapt**, and **scratch** learning. Using small arithmetic regression tasks, matched deterministic seeds, and separated training, compatibility-probe, solve/calibration, and held-out evaluation data, we isolate acquisition reliability, transfer efficiency, parent identity, and distribution sensitivity.
 
-Our results show that prior knowledge is not uniformly beneficial. Transfer depends on the source-target relationship, the identity of the transferred parent, and the task distribution. In the fixed-target prerequisite analysis, additional prior history improves acquisition for some targets, while division exhibits negative transfer and squares remains difficult. A matched three-arm parent control further shows that parent identity matters beyond generic pretraining: relevant parents can accelerate acquisition relative to both scratch and unrelated parents, while an unrelated parent can either hurt or help depending on the target. A signed-domain follow-up demonstrates that these transfer effects can change substantially under distribution shift, including a reversal in transfer direction for multiplication → powers. Together, these results show that useful prior knowledge is conditional rather than universally beneficial.
+The results show that prior knowledge is not uniformly beneficial. In the authoritative fixed-target analysis, additional prior history improves acquisition for some targets, while division exhibits negative transfer and squares remains difficult. A matched three-arm parent-control experiment provides stronger evidence that parent identity matters beyond generic pretraining. For multiplication, the relevant clone is 117.2 steps faster than scratch and 298.3 steps faster than an unrelated parent; the unrelated parent is 181.1 steps slower than scratch. For powers, the corresponding differences are 260.5, 125.9, and 134.7 steps in favor of the first-named arm. All six parent-control paired tests remain significant after Holm correction across the six hypotheses. A signed-domain follow-up further shows that transfer is distribution-sensitive: multiplication→powers reverses direction from 2.217× to 0.703× on the valid matched seeds, while addition→subtraction changes from 0.408× to approximately 1.001×. The multiplication→multiplication null control changes only from 1.145× to 1.176× (p=0.591).
 
-The retention experiment establishes a narrower architectural invariant: previously acquired skills remain unchanged while later skills are learned in isolated parameter copies. We therefore interpret the study as a controlled empirical analysis of skill transfer under the proposed acquisition protocol, rather than as evidence of general immunity to catastrophic forgetting or broad generalization to larger architectures and domains.
+The retention experiment establishes a narrower architectural invariant: previously acquired skills remain unchanged while later skills are learned in isolated parameter copies. We therefore interpret the study as a controlled empirical analysis of skill transfer under the tested acquisition protocol, rather than as evidence of general immunity to catastrophic forgetting or broad generalization to larger architectures and domains.
 
 ## 1. Introduction
 
 Continual learning is not only a question of whether a model can learn a new task; it is also a question of how previously acquired capabilities should be used when a new task arrives. If all tasks continually update one shared parameter set, learning a new task can interfere with capabilities acquired earlier. An alternative is to treat acquired capabilities as persistent skills and to make an explicit acquisition decision: reuse a skill when it already solves the target, clone a useful parent and adapt the copy when prior knowledge may help, or fall back to scratch learning when prior knowledge is unsuitable.
 
-The key question studied here is therefore narrower and more testable than whether skill reuse is universally beneficial: **when does previously acquired knowledge help with a new skill, when does it hurt, and does the identity of the reused parent matter?** This question matters because a continual learner that always reuses prior knowledge can suffer negative transfer, while a learner that always starts from scratch discards potentially useful information. A useful acquisition mechanism should preserve all three options and make their consequences measurable.
+The key question studied here is narrower and more testable than whether skill reuse is universally beneficial: **when does previously acquired knowledge help with a new skill, when does it hurt, and does the identity of the reused parent matter?** A continual learner that always reuses prior knowledge can suffer negative transfer, while a learner that always starts from scratch discards potentially useful information. A useful acquisition mechanism should preserve all three options and make their consequences measurable.
 
-We study this question in a deliberately small and controlled experimental setting. The task family consists of arithmetic regression problems with a common input/output structure, and the model is a two-input, one-output neural network with a 32-unit hidden layer. This simplicity is intentional: it allows the source-target relationship, acquisition route, training budget, seed, and data distribution to be controlled independently, making it possible to distinguish several effects that would be confounded in a large benchmark. The results should therefore be read as a controlled study of transfer dynamics, not as evidence that the same behavior must hold across arbitrary architectures or application domains.
+We study this question in a deliberately small and controlled experimental setting. The task family consists of arithmetic regression problems with a common input/output structure, and the model is a two-input, one-output neural network with a 32-unit hidden layer. This simplicity is intentional: it allows the source-target relationship, acquisition route, training budget, seed, and data distribution to be controlled independently. The results should therefore be read as a controlled study of transfer dynamics, not as evidence that the same behavior must hold across arbitrary architectures or application domains.
 
 The framework evaluates three acquisition routes. **Reuse** keeps an existing skill unchanged when independent evidence indicates that it already solves the target. **Clone-and-adapt** copies a selected parent and trains the copy on the new task, leaving the stored parent intact. **Scratch** starts from a fresh initialization. This design makes it possible to ask not merely whether pretraining helps, but whether a particular previously acquired skill provides a better initialization than another one.
 
@@ -26,25 +26,25 @@ The experiments are organized around five questions:
 4. **Parent identity:** Does the benefit of cloning depend on which previously acquired skill supplies the initialization, beyond the generic effect of pretraining?
 5. **Domain sensitivity:** Does observed transfer remain stable when the operand distribution is expanded from non-negative to signed values?
 
-These questions are answered with matched deterministic seeds, explicit separation of training, compatibility, calibration, and held-out evaluation data, a three-arm parent-control experiment, and an explicit signed-domain follow-up. The resulting evidence is intentionally interpreted as conditional on the tested protocol. The main conclusion is not that cloning always helps, nor that prior skills constitute universal prerequisites. Rather, the experiments show that transfer is heterogeneous, that parent identity can matter beyond generic pretraining, and that the direction and magnitude of transfer can change with the task distribution.
+These questions are answered with matched deterministic seeds, explicit separation of training, compatibility, calibration, and held-out evaluation data, a three-arm parent-control experiment, and an explicit signed-domain follow-up. The evidence is intentionally interpreted as conditional on the tested protocol.
 
 ### Contributions
 
 This work makes four contributions:
 
-1. **A controlled three-route skill-acquisition framework.** We define and evaluate a reproducible acquisition protocol with three explicit alternatives—reuse, clone-and-adapt, and scratch—together with separate compatibility and independent solve checks. This separates the decision to reuse an existing capability from the decision to use that capability as an initialization for further learning.
+1. **A controlled three-route skill-acquisition framework.** We define and evaluate a reproducible protocol with three explicit alternatives—reuse, clone-and-adapt, and scratch—together with separate compatibility and independent solve checks.
 
-2. **Evidence for heterogeneous transfer and parent-specific effects.** Matched experiments show that prior skills can produce positive, negative, or limited transfer depending on the target. The three-arm parent-control experiment goes beyond a generic pretrained-versus-scratch comparison by holding the target, seed, data, architecture, optimizer, and budget fixed while varying only the parent identity; the resulting differences provide evidence that the identity of the transferred skill matters under the tested protocol.
+2. **Evidence for heterogeneous transfer and parent-specific effects.** Matched experiments show that prior skills can produce positive, negative, or limited transfer depending on the target. The three-arm parent-control experiment holds the target, seed, data, architecture, optimizer, and budget fixed while varying parent identity, providing evidence that the identity of the transferred skill matters under the tested protocol.
 
-3. **Evidence that transfer is sensitive to the task distribution.** The signed-domain follow-up tests whether source-target transfer relationships remain stable when operand distributions change from non-negative to signed values. The observed changes include both substantial shifts in magnitude and a reversal of transfer direction, showing that transfer is not a fixed property of task labels alone.
+3. **Evidence that transfer is sensitive to the task distribution.** The signed-domain follow-up changes the operand distribution from non-negative to signed values. The resulting changes include both substantial shifts in transfer magnitude and a reversal of transfer direction.
 
-4. **A reproducible methodology for controlled transfer studies.** The study combines matched deterministic seeds, separated training/probe/calibration/evaluation data, explicit budget-capped acquisition metrics, prerequisite-validity accounting, and multiplicity-corrected paired inference. Retention is deliberately reported as an architectural isolation invariant rather than as evidence of general immunity to catastrophic forgetting.
+4. **A reproducible methodology for controlled transfer studies.** The study combines matched deterministic seeds, separated training/probe/calibration/evaluation data, explicit budget-capped acquisition metrics, prerequisite-validity accounting, and multiplicity-corrected paired inference. Retention is deliberately reported as an architectural isolation invariant rather than evidence of general immunity to catastrophic forgetting.
 
-Together, these contributions establish a bounded empirical claim: under the tested controlled protocol, prior skills can be useful, harmful, or largely neutral, and their effect depends on the target, parent identity, and data distribution. The work does not claim that these transfer patterns necessarily generalize to larger architectures or unrelated domains; instead, it provides a controlled setting in which the relevant effects can be isolated and measured.
+Together, these contributions establish a bounded empirical claim: **under the tested controlled protocol, prior skills can be useful, harmful, or largely neutral, and their effect depends on the target, parent identity, and data distribution.**
 
-## 2. Experimental system
+## 2. Experimental System
 
-The prototype uses a small two-input, one-output neural network with a 32-unit hidden layer. The task family consists of addition, subtraction, multiplication, powers, squares, and division. All conditions use the same architecture, optimizer, learning rate, training procedure, convergence criterion, and fixed training budget unless explicitly stated otherwise for the signed-domain configuration.
+The prototype uses a small two-input, one-output neural network with a 32-unit hidden layer. The task family consists of addition, subtraction, multiplication, powers, squares, and division. The same architecture, optimizer, learning procedure, convergence criterion, and training budget are used across the controlled comparisons; the signed-domain experiment changes only the explicitly documented input distribution.
 
 The controller exposes three acquisition routes:
 
@@ -54,24 +54,26 @@ The controller exposes three acquisition routes:
 
 The corrected reuse gate is important. A high frozen compatibility score alone is not sufficient evidence that the source skill already solves the target. The independent solve-accuracy check prevents a merely related skill from being incorrectly treated as a zero-training solution.
 
-### 2.1 Mathematical formulation
+### 2.1 Mathematical Formulation
 
 Let the incoming target task be $T$ and let the repository contain previously acquired skills $s_i$, each represented by a parameter vector $\theta_i$. A skill maps an input $x$ to an output through $f(x;\theta_i)$.
 
-For a target compatibility-probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score used by the controller is the exponentially transformed mean squared error:
+For a target compatibility-probe set $D_T^{\mathrm{probe}}=\{(x_j,y_j)\}_{j=1}^{m}$, the frozen compatibility score is computed from mean squared error:
 
 $$
 \mathrm{MSE}(T,s_i)=\frac{1}{m}\sum_{j=1}^{m}
-\left(f(x_j;\theta_i)-y_j\right)^2
+\left(f(x_j;\theta_i)-y_j\right)^2.
 $$
+
+The controller transforms this error into a compatibility score:
 
 $$
 P(T\mid s_i)=\exp\left(-\frac{\mathrm{MSE}(T,s_i)}{60}\right).
 $$
 
-The compatibility score is computed without updating $\theta_i$. It therefore measures how well the frozen parent already matches the target, rather than how useful its internal representation will necessarily be after adaptation.
+The compatibility score is computed without updating $\theta_i$. It therefore measures how well the frozen parent already matches the target; it is not itself a measure of post-adaptation transfer benefit.
 
-The controller then evaluates the same frozen parent on a separate **solve/calibration batch** $D_T^{\mathrm{solve}}=\{(x_j,y_j)\}_{j=1}^{64}$, sampled independently from the compatibility probe. The target-solve accuracy is defined as the fraction of calibration examples whose absolute prediction error is at most the experiment's accuracy tolerance $\epsilon=0.5$:
+The controller then evaluates the same frozen parent on a separate **solve/calibration batch** $D_T^{\mathrm{solve}}=\{(x_j,y_j)\}_{j=1}^{64}$, sampled independently from the compatibility probe. The target-solve accuracy is:
 
 $$
 A(T,s_i)=\frac{1}{64}\sum_{j=1}^{64}
@@ -80,9 +82,9 @@ A(T,s_i)=\frac{1}{64}\sum_{j=1}^{64}
 \right].
 $$
 
-Thus $A(T,s_i)$ is an independently measured estimate of whether the frozen parent actually solves the target, rather than a relabeling derived from the compatibility score. The solve/calibration batch is separate from both the training data and the compatibility-probe batch, and the held-out test set is never consulted for the reuse decision. In the implementation, the calibration batch uses the independent solve-probe seed offset $20{,}000$ and the same task sampling procedure as the experiments.
+The calibration batch is separate from training data and from the compatibility-probe batch. The held-out test set is never consulted for the reuse decision. The implementation uses the independent solve-probe seed offset $20{,}000$ and the same task-sampling procedure as the experiments.
 
-With thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects an action according to:
+With compatibility thresholds $\tau_{\mathrm{solve}}=0.90$ and $\tau_{\mathrm{clone}}=0.15$, the controller selects:
 
 $$
 \mathrm{action}(T,s_i)=
@@ -93,60 +95,56 @@ $$
 \end{cases}
 $$
 
-When clone-and-adapt is selected from parent $s_i$, the target model is initialized from the parent's parameters:
+When cloning from parent $s_i$, the target is initialized by:
 
 $$
 \theta_T^{(0)}=\theta_i.
 $$
 
-For scratch learning, $\theta_T^{(0)}$ is independently initialized. The adapted parameters are then obtained by minimizing the target training loss, represented here by mean squared error:
+Scratch learning uses an independent initialization. The adapted parameters minimize target mean squared error:
 
 $$
 \theta_T^*=\arg\min_{\theta}\;\frac{1}{n}\sum_{j=1}^{n}
 \left(f(x_j;\theta)-y_j\right)^2.
 $$
 
-These equations define the mechanism evaluated in the experiments; they do not assume that a larger compatibility score must imply a larger transfer benefit.
+These equations define the mechanism evaluated in the experiments. They do not imply that a larger compatibility score must produce a larger transfer benefit.
 
-### 2.2 Acquisition metrics
+### 2.2 Acquisition Metrics
 
-For a matched seed $r$, let $E_{\mathrm{scratch}}^{(r)}$ and $E_{\mathrm{clone}}^{(r)}$ denote the numbers of epochs required to reach the predeclared training criterion. The per-seed training-cost ratio is:
+For matched seed $r$, let $E_{\mathrm{scratch}}^{(r)}$ and $E_{\mathrm{clone}}^{(r)}$ denote the epochs required to reach the predeclared acquisition criterion. The per-seed training-cost ratio is:
 
 $$
 S^{(r)}=\frac{E_{\mathrm{scratch}}^{(r)}}{E_{\mathrm{clone}}^{(r)}}.
 $$
 
-Thus $S>1$ favors clone-and-adapt, while $S<1$ indicates that cloning is slower than scratch. Training is capped at 1500 epochs. If an attempted target does not reach the acquisition criterion, its recorded epoch count is the full 1500-epoch budget. Consequently, this ratio is a **budget-capped training-cost comparison**, not a convergence-time comparison restricted to successful runs.
+Thus $S>1$ favors cloning, whereas $S<1$ indicates that cloning is slower than scratch. Training is capped at 1500 epochs. If an attempted target does not reach the criterion, its recorded epoch count is the full 1500-epoch budget. The ratio is therefore a **budget-capped training-cost comparison**, not a convergence-time estimate restricted to successful runs.
 
-Acquisition reliability is kept separate from efficiency. Let $I_r=1$ when the target reaches the declared acquisition criterion within the allowed budget and $I_r=0$ otherwise. The empirical success rate is:
+Acquisition reliability is reported separately. Let $I_r=1$ when a target reaches the declared criterion within the allowed budget and $I_r=0$ otherwise. The empirical success rate is:
 
 $$
-R=\frac{1}{N}\sum_{r=1}^{N} I_r.
+R=\frac{1}{N}\sum_{r=1}^{N}I_r.
 $$
 
-This separation is important for difficult targets such as squares, where a method may have a low success rate even if successful runs can be compared for convergence speed.
+This distinction is important for difficult targets such as squares, where a method can have low success despite informative successful-run speed comparisons.
 
-### 2.3 Parent-control design
+### 2.3 Parent-Control Design
 
 To distinguish useful parent identity from generic pretraining, a three-arm matched control compares a relevant clone, an unrelated previously acquired clone, and scratch initialization. For each target comparison, all three arms use the same target, seed, training data, architecture, optimizer, and budget. Only skills acquired before the target are eligible as parents.
 
-The relevant parent is the highest-compatibility previously acquired skill under the controller's ranking. The unrelated parent is a different previously acquired skill. Both cloned arms are deep copies of their respective stored networks and are trained on the same target data as the scratch arm. The comparison therefore tests whether parent identity contributes to acquisition efficiency beyond the generic effect of starting from a pretrained network.
+The relevant parent is the highest-compatibility previously acquired skill under the controller's ranking. The unrelated parent is a different previously acquired skill. Both cloned arms are deep copies of their respective stored networks and are trained on the same target data as the scratch arm.
 
-The inferential unit is the matched seed within target. Descriptive arm means are retained for context, but paired differences are the primary inferential summaries.
+The inferential unit is the matched seed within target. Descriptive arm means are secondary; paired differences are the primary inferential summaries. The six parent-control hypotheses are corrected jointly with Holm's step-down procedure.
 
-### 2.4 Retention and isolation invariant
+### 2.4 Retention and Isolation Invariant
 
 For an acquired skill $s_i$, let $\theta_i^{\mathrm{pre}}$ and $\theta_i^{\mathrm{post}}$ denote its stored parameters immediately before and after a later skill is acquired. The intended isolated-skill invariant is:
 
 $$
-\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}}.
+\theta_i^{\mathrm{post}}=\theta_i^{\mathrm{pre}},
 $$
 
-Equivalently,
-
-$$
-\Delta\theta_i=\theta_i^{\mathrm{post}}-\theta_i^{\mathrm{pre}}=0.
-$$
+or equivalently $\Delta\theta_i=0$.
 
 The retention experiment evaluates the same stored skill on the same stable retention set before and after later acquisition. Its diagnostic accuracy change is:
 
@@ -154,104 +152,185 @@ $$
 \Delta A_i=A_{i,\mathrm{post}}-A_{i,\mathrm{pre}}.
 $$
 
-The predeclared practical diagnostic criterion is:
+The predeclared practical diagnostic criterion is $\Delta A_i\geq-0.05$.
 
-$$
-\Delta A_i\geq-0.05.
-$$
+Because the stored parent is not optimized after acquisition and the evaluation set is unchanged, zero change is expected under the mechanism. Retention is therefore interpreted as an implementation/invariance diagnostic, not as a statistical estimate of resistance to interference.
 
-Because the stored parent is not optimized after acquisition and the evaluation set is unchanged, $\Delta A_i=0$ is expected under the mechanism. Therefore this quantity is reported as an implementation/invariance diagnostic, not as a statistical estimate of resistance to interference.
-
-### Data separation
+### Data Separation and Seeds
 
 The experiment separates target-training data, compatibility-probe data, solve/calibration data, and held-out evaluation data. Held-out evaluation data are not used to choose thresholds, budgets, stopping rules, or model-selection decisions.
 
-### Seeds
+The main relatedness, parent-control, and retention checks use 15 deterministic seeds per condition. The signed-domain follow-up also uses 15 nominal seeds per condition. Pairing by seed permits within-seed comparisons wherever the same source acquisition is valid in both conditions.
 
-Experiments use matched deterministic seeds. The main relatedness, parent-control, and retention checks use 15 seeds per condition; the signed-domain follow-up also uses 15 nominal seeds per condition. Pairing by seed allows within-seed comparisons between acquisition strategies where applicable.
+## 3. Research Design
 
-## 3. Research design
+### 3.1 Historical Relatedness Analysis and Authoritative Fixed-Target Matrix
 
-### 3.1 Historical relatedness analysis and authoritative fixed-target matrix
-
-The initial source-target experiments examined multiplication $\rightarrow$ squares, multiplication $\rightarrow$ powers, addition $\rightarrow$ subtraction, and addition $\rightarrow$ multiplication. These results are retained as a **historical relatedness analysis** and are useful for showing that transfer can be heterogeneous.
+The initial source-target experiments examined multiplication→squares, multiplication→powers, addition→subtraction, and addition→multiplication. These results are retained as a **historical relatedness analysis** and are useful for showing that transfer can be heterogeneous.
 
 The **expanded fixed-target prerequisite matrix is the authoritative current quantitative analysis**. It holds the target fixed and varies the prior-skill history across no prior skill, addition only, and addition + multiplication. The matrix includes subtraction, division, squares, and powers. This design distinguishes the effect of relevant prior knowledge from the mere presence of additional training history.
 
-The interpretation is deliberately conservative. A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target under the stated protocol.
+A curriculum order is not treated as proof that one task is a mathematical prerequisite for another. The experiment only tests whether a previously learned representation is useful for acquiring the target under the stated protocol. A requested prerequisite must actually reach the acquisition criterion before it is exposed to the controller. If a prerequisite fails, the history is marked invalid, the failed skill is unavailable, and the target is not attempted for that seed.
 
-A requested prerequisite must actually reach the acquisition criterion before it is exposed to the controller. If a prerequisite fails, the history is marked invalid, the failed skill is unavailable, and the target is not attempted for that seed.
+### 3.2 Parent-Identity Control
 
-### 3.2 Parent-identity control
+The parent-control experiment is a matched three-arm test of the claim that relevant cloning provides more than generic pretraining. The relevant and unrelated parents are both drawn from the set of skills already acquired before the target; no future task or target-trained representation is exposed to parent selection. For each seed, the relevant, unrelated, and scratch arms are trained independently on the same target data.
 
-The parent-control experiment is designed as a matched three-arm test of the claim that relevant cloning provides more than generic pretraining. The relevant and unrelated parent are both drawn from the set of skills already acquired before the target; no future task or target-trained representation is exposed to parent selection. For each seed, the relevant, unrelated, and scratch arms are trained independently on the same target data.
+The experiment reports paired differences for relevant minus scratch, relevant minus unrelated, and unrelated minus scratch. Six paired hypotheses are tested across multiplication and powers. Holm's step-down correction is applied across these six paired $t$-test $p$-values.
 
-The experiment reports paired differences for relevant minus scratch, relevant minus unrelated, and unrelated minus scratch. Six paired hypotheses are tested across multiplication and powers. Holm's step-down correction is applied across these six paired $t$-test $p$-values. The manuscript reports the adjusted values alongside the raw paired results and does not treat arm means as independent observations.
+This control is stronger than a clone-versus-scratch comparison alone. If all pretrained networks helped equally, relevant and unrelated cloning would be expected to perform similarly. A difference between the two cloned parents therefore provides evidence that parent identity matters under the tested protocol, without by itself establishing a causal representation-level mechanism.
 
-This control is intentionally stronger than a comparison of clone versus scratch alone: if all pretrained networks helped equally, relevant and unrelated cloning would be expected to perform similarly. A difference between the two cloned parents therefore provides evidence that parent identity matters under the tested protocol.
-
-### 3.3 Retention and catastrophic forgetting
+### 3.3 Retention and Catastrophic Forgetting
 
 The retention code performs sequential acquisition and re-evaluates every previously acquired skill after each later acquisition on a stable, skill-specific evaluation set. This verifies the intended isolation invariant: a stored parent skill is not modified when a later skill is trained as an independent copy.
 
-For each retention check the implementation records pre/post accuracy, accuracy change, retention ratio, and whether the change remains within a predeclared five-percentage-point practical tolerance. These measurements are useful diagnostics of the invariant, but they should not be interpreted as a conventional statistical test of forgetting because the isolated-skill architecture does not expose the stored parent to subsequent optimization.
+For each retention check the implementation records pre/post accuracy, accuracy change, retention ratio, and whether the change remains within the predeclared five-percentage-point practical tolerance. These measurements are useful diagnostics of the invariant, but they are not a conventional test of catastrophic forgetting because the isolated-skill architecture does not expose the stored parent to subsequent optimization.
 
-In particular, repeated evaluation of an unchanged network on a stable evaluation set is expected to produce the same result.
+A genuine empirical test of resistance to interference would require an at-risk comparison arm in which later learning can modify previously learned parameters, such as a shared-network baseline. That comparison is outside the scope of this study.
 
-A genuine empirical test of resistance to interference would require an at-risk comparison arm in which later learning can modify previously learned parameters, such as a shared-network baseline. That comparison is outside the scope of this PR and is not claimed here.
+### 3.4 Signed-Domain Follow-Up
 
-### 3.4 Signed-domain follow-up
-
-The signed-domain experiment compares the original non-negative configuration with an explicitly configured signed configuration. Task ranges are task-specific: addition, subtraction, multiplication, and squares use the signed sampling ranges documented in the experiment configuration. The purpose is not to establish a universal domain-shift benchmark, but to test whether the observed transfer relationships are stable under a concrete change in operand distribution.
+The signed-domain experiment compares the original non-negative configuration with an explicitly configured signed configuration. Task ranges are task-specific and are defined by the experiment configuration. The purpose is to test whether observed transfer relationships remain stable under a concrete change in operand distribution, not to isolate negative values as the sole causal variable.
 
 ## 4. Results
 
-### 4.1 Fixed-target acquisition
+### 4.1 Authoritative Fixed-Target Acquisition Results
 
-The **fixed-target prerequisite matrix is the primary quantitative result**. Holding the target fixed while varying prior-skill history shows that the effect of additional prior knowledge is target-dependent rather than monotonic. Powers benefit from additional prior history under the authoritative fixed-target design, while division exhibits negative transfer and squares remains difficult. These results support heterogeneous transfer: accumulating more skills does not guarantee faster or more reliable acquisition.
+The fixed-target prerequisite matrix is the primary quantitative result. The target is held fixed while prior-skill history varies across no prior skill, addition only, and addition + multiplication.
 
-Acquisition reliability and acquisition efficiency should be distinguished. The matrix first determines whether a target can be acquired within the declared budget; only then are matched training-cost comparisons interpreted. This distinction is especially important for difficult targets such as squares, where failures cannot be treated as ordinary successful convergence observations.
+| Target | No prior skill | Addition only | Addition + multiplication |
+|---|---:|---:|---:|
+| Subtraction | 33.5 epochs | 62.3 epochs | 73.2 epochs |
+| Division | 515.2 epochs | 616.2 epochs | 617.5 epochs |
+| Squares | 20.0% success | 20.0% success | 13.3% success |
+| Powers | 471.6 epochs | 355.2 epochs | 237.3 epochs |
 
-### 4.2 Parent identity
+For subtraction, division, and powers, values are acquisition epochs to the declared criterion, with an unsuccessful target after a valid prerequisite history contributing the full 1500-epoch budget. Invalid prerequisite histories are excluded because the target was never attempted. Squares is reported as success rate because many runs do not reach the acquisition criterion within the allowed budget.
 
-The matched three-arm parent-control experiment provides the strongest direct test of whether transfer depends on **which** prior skill is used, rather than merely on whether the model was pretrained. For multiplication, the relevant clone reaches the criterion 117.2 steps earlier than scratch on average and 298.3 steps earlier than the unrelated parent; the unrelated parent is itself 181.1 steps slower than scratch. For powers, the relevant clone is 260.5 steps faster than scratch and 125.9 steps faster than the unrelated parent, while the unrelated parent is 134.7 steps faster than scratch. Holm-adjusted paired tests support all six reported contrasts under the declared correction procedure.
+The matrix shows heterogeneous transfer rather than a universal benefit from additional prior knowledge. Powers improves substantially as prior history expands, whereas division becomes slower and squares remains difficult. These results are evidence about transfer under the tested protocol, not proof of formal mathematical prerequisite relationships.
 
-The pattern is important because it is not consistent with a simple rule that "pretraining helps." The unrelated parent hurts multiplication but helps powers, while the relevant parent outperforms both baselines for both targets. Under this protocol, the source skill therefore contains information about transfer that is not captured by the generic fact that it was pretrained.
+### 4.2 Parent-Identity Control Results
 
-### 4.3 Domain sensitivity
+The three-arm parent-control experiment provides the strongest current evidence that the benefit of cloning is not explained solely by generic pretraining. All six paired $t$-test comparisons remain below 0.05 after Holm correction.
 
-The signed-domain follow-up tests whether these transfer relationships remain stable when the input distribution changes. On the valid matched seeds, multiplication $\rightarrow$ powers changes from $2.217\times$ to $0.703\times$ and reverses direction ($p=0.00168$). Multiplication $\rightarrow$ squares changes from $1.265\times$ to $1.031\times$ without a conventionally significant domain difference ($p=0.0757$). Addition $\rightarrow$ subtraction changes from $0.408\times$ to $1.001\times$ ($p\approx1.88\times10^{-7}$), while the addition $\rightarrow$ multiplication null control changes from $1.145\times$ to $1.176\times$ with no statistically detectable domain difference ($p=0.591$).
+| Target | Comparison | Mean paired difference (steps) | Raw paired $p$ | Holm-adjusted $p$ |
+|---|---|---:|---:|---:|
+| Multiplication | relevant − scratch | −117.2 | 0.012672 | 0.012672 |
+| Multiplication | relevant − unrelated | −298.3 | 5.91×10^-6 | 1.77×10^-5 |
+| Multiplication | unrelated − scratch | +181.1 | 9.18×10^-4 | 1.84×10^-3 |
+| Powers | relevant − scratch | −260.5 | 6.01×10^-11 | 3.61×10^-10 |
+| Powers | relevant − unrelated | −125.9 | 1.01×10^-6 | 4.03×10^-6 |
+| Powers | unrelated − scratch | −134.7 | 2.40×10^-8 | 1.20×10^-7 |
 
-The powers and squares comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. These results are therefore interpreted as limited domain-sensitivity evidence rather than as high-powered general conclusions.
+Negative differences favor the first-named arm because the outcome is convergence steps. For multiplication, relevant cloning is faster than both scratch and unrelated cloning, while unrelated cloning is slower than scratch. For powers, both pretrained arms outperform scratch, but the relevant parent is still significantly faster than the unrelated parent.
 
-### 4.4 Retention
+The pattern supports a narrower claim than “cloning helps”: **parent identity matters under the tested protocol**. The multiplication result shows that an unrelated parent can be worse than scratch, whereas the powers result shows that unrelated pretraining can itself help. Thus the relevant-parent advantage cannot be reduced to a simple pretrained-versus-untrained distinction. These results do not imply that every relevant parent will outperform every unrelated parent on arbitrary tasks.
 
-Under the isolated-skill architecture, previously acquired parameters remain unchanged during later acquisition, and the stable retention evaluations remain unchanged within the implementation tolerance. This result verifies the intended storage/isolation invariant. It does not establish that a shared-network continual learner would avoid catastrophic forgetting.
+### 4.3 Historical Relatedness Results
 
-## 5. Discussion
+The earlier relatedness-pair experiment produced heterogeneous transfer: multiplication→powers showed a mean paired speedup of approximately 2.31×, multiplication→squares approximately 1.26×, addition→subtraction approximately 0.33×, and addition→multiplication approximately 1.12×.
 
-The results support a bounded view of skill transfer. Prior knowledge is neither uniformly beneficial nor uniformly harmful. Its effect depends on the relationship between the source and target, the identity of the parent selected for cloning, and the input distribution on which the skills are evaluated.
+These values are retained as historical relatedness results. They are not substituted for the authoritative fixed-target matrix or the parent-control analysis. Their purpose is to show why source-target relatedness must be evaluated empirically rather than assumed from task labels or intuitive prerequisite order.
 
-The parent-control experiment is especially informative because it separates two effects that are often conflated: generic pretraining and task-specific transfer. An unrelated parent can be beneficial for one target and harmful for another, while a relevant parent can provide an additional advantage. This suggests that the utility of a stored skill is not determined solely by its training history; the relationship between the learned parameters and the incoming task matters.
+### 4.4 Signed-Domain Transfer Results
 
-The fixed-target prerequisite matrix also argues against interpreting curriculum order as a universal prerequisite graph. A prior skill can improve acquisition under one target while adding little or even imposing a cost under another. The appropriate conclusion is therefore conditional: prior histories alter acquisition dynamics under the tested protocol, but they do not define universal prerequisites.
+The signed-domain follow-up compares the original non-negative configuration with an explicitly configured signed configuration. The primary outcome is the matched-seed training-cost ratio $S$.
 
-The signed-domain follow-up strengthens this conditional interpretation. Several transfer ratios change substantially when the operand distribution changes, including a reversal for multiplication $\rightarrow$ powers. This indicates that transfer relationships are sensitive to the data distribution and should not be treated as invariant properties of task names alone.
+| Pair | Valid matched seeds | Non-negative | Signed | Difference (non-negative − signed) | Paired $p$ |
+|---|---:|---:|---:|---:|---:|
+| multiplication→powers | 5/15 | 2.217±0.530 | 0.703±0.141 | 1.514±0.451 | 0.00168 |
+| multiplication→squares | 5/15 | 1.265±0.178 | 1.031±0.069 | 0.235±0.220 | 0.0757 |
+| addition→subtraction | 15/15 | 0.408±0.100 | 1.001±0.224 | −0.594±0.243 | ≈1.88×10^-7 |
+| addition→multiplication (null control) | 15/15 | 1.145±0.138 | 1.176±0.128 | −0.031±0.218 | 0.591 |
+
+The first two comparisons have only 5/15 valid matched seeds because signed-domain multiplication prerequisite acquisition fails in 10 seeds. Those failures are explicitly reported and are not converted into artificial speedup observations.
+
+Multiplication→powers reverses direction: the paired mean changes from 2.217× to 0.703×, with a statistically detectable domain difference ($p=0.00168$). Multiplication→squares moves toward no effect, from 1.265× to 1.031×; the paired comparison is not conventionally significant ($p=0.0757$), so this should not be described as proof of equivalence. Addition→subtraction changes from negative transfer (0.408×) to approximately neutral transfer (1.001×), with a strong paired difference. The addition→multiplication null control changes only from 1.145× to 1.176× and shows no statistically detectable domain difference ($p=0.591$).
+
+These results support domain sensitivity under the tested configuration, but the signed-domain comparison is not a clean causal test of negative numbers alone because the input distribution changes more broadly.
+
+### 4.5 Signed-Domain Prerequisite Reliability
+
+The signed-domain experiment also reveals prerequisite attrition. Invalid histories are fail-closed: the failed prerequisite is not exposed to the controller and the target is not attempted.
+
+Signed-domain squares has 0/15 target successes for all three tested histories. This establishes failure within the declared 1500-epoch budget for this protocol; it does not establish impossibility of learning signed squares in general.
+
+### 4.6 Compatibility Sensitivity
+
+The controller itself is distribution-sensitive. For division with an addition parent, the frozen compatibility score is approximately 0.28–0.31 in the non-negative domain and approximately 0.03–0.06 in the signed domain. The non-negative values exceed the clone threshold while the signed values fall below it, so controller behavior shifts toward scratch under the signed configuration.
+
+This observation is consistent with the broader domain-sensitivity results: the decision mechanism is based on the frozen behavior of a stored parent on the current target distribution, so changing that distribution can change both measured compatibility and the selected acquisition route.
+
+### 4.7 Retention Mechanism Check
+
+The retention run reports zero change in the repeated pre/post checks and a 100% pass rate under the five-percentage-point practical tolerance. These values are consistent with the implementation invariant that previously acquired skills are stored independently and are not modified while a new skill is adapted.
+
+Because the same unchanged skill is evaluated on the same skill-specific retention set before and after later acquisitions, zero change is an expected consequence of the mechanism. We therefore interpret the result as an implementation-level verification of parameter isolation, not as evidence that the architecture is immune to catastrophic forgetting under interference.
+
+## 5. Statistical Analysis
+
+The inferential unit for matched strategy comparisons is the seed. For parent-control comparisons, the relevant, unrelated, and scratch arms are evaluated on the same target and matched seed, and paired differences are tested within target.
+
+The six parent-control hypotheses form one multiplicity family. Holm's step-down procedure is applied to the six raw paired $t$-test $p$-values. The adjusted values remain below 0.05 for all six comparisons. This correction reduces the risk that the parent-identity conclusion depends on an uncorrected collection of six tests.
+
+For signed-domain comparisons, only seeds valid in both domains are included. The paired powers and squares comparisons therefore use 5/15 valid matched seeds, not 15/15. The 10 signed multiplication-prerequisite failures are reported separately and are not converted into missing-at-random speed observations.
+
+A non-significant $p$-value is not interpreted as evidence of exact equality or equivalence. This is particularly important for multiplication→squares and the addition→multiplication null control. Conversely, statistically significant paired differences are interpreted as evidence of a difference under the tested protocol, not as proof of a particular representation-level causal mechanism.
+
+Retention is treated differently. Since the stored parent is not optimized after acquisition, zero change is expected under the isolation architecture. Statistical inference on the retention delta would therefore not answer the stronger scientific question of whether a system resists interference when interference is possible.
+
+## 6. Discussion
+
+The combined findings support a bounded view of skill transfer. Prior knowledge is neither uniformly beneficial nor uniformly harmful. Its effect depends on the relationship between the source and target, the identity of the parent selected for cloning, and the input distribution on which the skills are evaluated.
+
+The parent-control experiment is especially informative because it separates generic pretraining from source-specific transfer. An unrelated parent can be beneficial for one target and harmful for another, while a relevant parent can provide an additional advantage. The evidence therefore supports the statement that **parent identity matters under the tested protocol**, rather than the broader statement that any pretrained parent is beneficial.
+
+The fixed-target matrix complements this result. Powers benefits from additional prior history, while division exhibits negative transfer and squares remains difficult. These heterogeneous outcomes argue against treating curriculum order as a universal prerequisite graph. A prior skill can improve acquisition under one target while adding little or imposing a cost under another.
+
+The signed-domain follow-up strengthens the conditional interpretation. Several transfer ratios change substantially when the operand distribution changes, including a reversal for multiplication→powers. Addition→subtraction changes from negative transfer to approximately neutral transfer, while the addition→multiplication null control shows no statistically detectable domain difference. The results therefore suggest that transfer relationships are properties of the source, target, and distribution together, rather than immutable properties of task names.
 
 The retention result has a deliberately narrower interpretation. Because skills are stored independently and later training operates on copies, preservation of the original parameters is an architectural consequence of isolation. It is useful as an implementation invariant, but it does not replace a shared-parameter continual-learning baseline for studying catastrophic forgetting under interference.
 
-## 6. Limitations
+## 7. Limitations and Threats to Validity
 
-The most important limitation is external validity. The experiments use a small arithmetic task family and a 32-unit network. This design provides unusually strong control over source-target relationships, but it does not establish that the same transfer dynamics occur in larger networks, perceptual tasks, language tasks, or other continual-learning settings.
+**Task-family scope.** The experiments use a small arithmetic task family. Arithmetic provides strong control over source-target relationships but cannot establish that the same transfer dynamics occur in language, vision, control, or other domains.
 
-The signed-domain follow-up has an additional limitation: 10 of 15 nominal seeds fail to acquire the signed-domain multiplication prerequisite, leaving only 5 valid matched seeds for the multiplication $\rightarrow$ powers and multiplication $\rightarrow$ squares comparisons. These results are consequently low-powered and are presented as domain-sensitivity evidence rather than definitive estimates of generalization.
+**Model scale.** The model is small, with a 32-unit hidden layer. Results may depend on architecture, parameter count, optimizer, and training dynamics.
 
-The isolated-skill architecture also limits what can be concluded about catastrophic forgetting. Since later training does not modify stored parents, perfect retention is expected by construction. A meaningful comparison to conventional interference-based continual learning would require an at-risk shared-parameter baseline, which is not part of this study.
+**Finite seeds.** Fifteen seeds provide useful matched comparisons but do not establish universal population-level behavior. The signed-domain powers and squares comparisons are more limited because only 5/15 seeds are valid in both domains.
 
-Finally, the controller's compatibility and solve thresholds are fixed by the experimental protocol. The study evaluates the behavior of this specified decision mechanism rather than claiming that these thresholds are optimal or universally appropriate.
+**Controller dependence.** The behavior depends on the compatibility probe, thresholds, and independent solve gate. The study evaluates this specified decision mechanism rather than claiming that the thresholds are optimal or universally appropriate.
 
-## 7. Reproducibility and statistical protocol
+**Budget dependence.** Acquisition cost is capped at 1500 epochs. A capped ratio can therefore reflect budgeted failure as well as successful convergence speed and should not be interpreted as an unconstrained optimization-time estimate.
 
-All primary comparisons use deterministic matched seeds and preserve the same target data across the relevant acquisition arms. Training, compatibility probes, independent solve/calibration batches, and held-out evaluation sets are separated. The parent-control analysis uses paired within-seed comparisons and applies Holm's step-down correction across the six planned paired hypotheses. Failed prerequisite acquisitions are explicitly recorded rather than silently treated as successful observations.
+**Parent-control scope.** The relevant/unrelated/scratch comparison covers two targets in one small arithmetic family. It supports parent-identity dependence under the tested protocol, not a universal ranking rule for source skills.
 
-The repository contains the experiment configurations, scripts, workflows, result artifacts, and documentation needed to reproduce the reported analyses.
+**Signed-domain confounding.** The signed-domain manipulation changes the input distribution in addition to introducing negative values. The conclusions therefore concern domain/distribution sensitivity rather than negative numbers alone.
+
+**Retention interpretation.** Perfect retention is expected from isolated storage. The study does not include an at-risk shared-network baseline in which later training can modify parameters supporting earlier skills. Consequently, it does not establish general resistance to catastrophic forgetting.
+
+**Prerequisite interpretation.** Earlier acquisition in a curriculum is evidence about transfer under the stated protocol, not proof of a formal mathematical prerequisite relationship.
+
+**Failure interpretation.** Failure within the declared budget does not establish that a task is impossible to learn. It establishes only that the acquisition criterion was not reached under the tested configuration and budget.
+
+## 8. Reproducibility
+
+The repository contains the experiment drivers, regression tests, workflow configuration, raw result artifacts, statistical summaries, and documentation needed to audit the headline results. CI executes the relevant experiments and uploads generated artifacts.
+
+The parent-control experiment records per-seed arm outcomes and paired statistics for relevant, unrelated, and scratch arms. The final statistical analysis applies Holm correction across the six parent-control paired tests.
+
+The signed-domain experiment records per-seed pair validity, source-acquisition failures, domain-specific outcomes, paired statistics, history validity, and sign-specific diagnostics. The manuscript reports the effective matched sample size for the paired domain tests.
+
+The non-negative configuration remains the default. Signed-domain behavior is an explicit experimental configuration and does not silently alter the baseline task distribution.
+
+## 9. Conclusion
+
+This study evaluates a controlled continual skill-acquisition mechanism in which an incoming target can be handled by reuse, clone-and-adapt, or scratch learning. The experiments do not support the claim that cloning always helps, nor do they establish general immunity to catastrophic forgetting.
+
+The authoritative fixed-target analysis instead shows heterogeneous transfer: powers benefits from additional prior history, division exhibits negative transfer, and squares remains difficult. The matched parent-control experiment provides stronger evidence that the source identity matters: relevant cloning is faster than scratch and unrelated cloning for both multiplication and powers after Holm correction, while unrelated pretraining can either hurt or help depending on the target. Thus the benefit is not explained solely by generic pretraining; **parent identity matters under the tested protocol**.
+
+The signed-domain follow-up further shows that transfer can change with the input distribution. Multiplication→powers reverses direction, multiplication→squares moves toward no effect without a conventionally significant paired domain difference, and addition→subtraction changes from negative to approximately neutral transfer. The addition→multiplication null control shows no statistically detectable domain difference under the tested manipulation.
+
+Finally, the isolated-skill mechanism preserves stored parent parameters during later acquisition as an architectural invariant. This is a property of independent storage and copy-based adaptation, not a demonstration that an interference-capable continual learner would resist catastrophic forgetting.
+
+The resulting contribution is therefore a controlled empirical foundation for studying **when and why previously acquired skills help or hurt the acquisition of new skills**. Future work should extend the parent-control design to broader task families and add explicit at-risk shared-parameter baselines so that transfer and forgetting can be studied under the same experimental framework.
