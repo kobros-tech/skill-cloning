@@ -7,11 +7,18 @@ on:
 permissions:
   contents: write
 
+# Prevent concurrent publication-result writers from racing each other.
+concurrency:
+  group: publication-results-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   validate-publication-results:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -25,16 +32,49 @@ jobs:
       - name: Validate publication result sources
         run: python scripts/validate_publication_results.py
 
-      - name: Sync generated publication figures
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
+      - name: Sync generated publication figures safely
+        if: github.event_name == 'push'
+        shell: bash
         run: |
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          set -euo pipefail
+
+          BRANCH="${GITHUB_REF_NAME}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results/figure_fixed_target_history.png results/figure_fixed_target_history.svg results/figure_signed_domain_speedup.png results/figure_signed_domain_speedup.svg
+
+          git add \
+            results/figure_fixed_target_history.png \
+            results/figure_fixed_target_history.svg \
+            results/figure_signed_domain_speedup.png \
+            results/figure_signed_domain_speedup.svg
+
           if git diff --cached --quiet; then
             echo "No publication figure changes to commit."
             exit 0
           fi
+
           git commit -m "Sync authoritative publication figures [skip ci]"
-          git push origin "HEAD:${BRANCH}"
+
+          # The branch may advance while experiments are running. Rebase the
+          # generated commit onto the current remote tip before pushing. Never
+          # force-push and never overwrite intervening commits.
+          for attempt in 1 2 3 4 5; do
+            echo "Safe publication-results push attempt ${attempt}/5"
+            git fetch origin "${BRANCH}"
+            if ! git rebase "origin/${BRANCH}"; then
+              echo "Rebase conflict detected; aborting rather than overwriting branch history."
+              git rebase --abort || true
+              exit 1
+            fi
+
+            if git push origin "HEAD:${BRANCH}"; then
+              echo "Publication figures synchronized successfully."
+              exit 0
+            fi
+
+            # Another writer may have advanced the branch between fetch and push.
+            sleep $((attempt * 2))
+          done
+
+          echo "Failed to synchronize publication figures after 5 safe attempts."
+          exit 1
